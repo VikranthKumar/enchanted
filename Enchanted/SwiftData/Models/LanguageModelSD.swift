@@ -31,8 +31,12 @@ final class LanguageModelSD: Identifiable {
 }
 
 // MARK: - Helpers
-extension LanguageModelSD {
+extension LanguageModelSD {    
     var prettyName: String {
+        if modelProvider == .local {
+            return name
+        }
+        
         guard let modelName = name.components(separatedBy: ":").first else {
             return name
         }
@@ -41,6 +45,10 @@ extension LanguageModelSD {
     }
     
     var prettyVersion: String {
+        if modelProvider == .local {
+            return "Local Model"
+        }
+        
         let components = name.components(separatedBy: ":")
         if components.count >= 2 {
             return components[1]

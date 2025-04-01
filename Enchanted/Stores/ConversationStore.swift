@@ -114,35 +114,29 @@ final class ConversationStore: Sendable {
         conversation.updatedAt = Date.now
         conversation.model = model
         
-        print("model", model.name)
-        print("conversation", conversation.name)
-        
-        /// trim conversation if on edit mode
+        // trim conversation if on edit mode
         if let trimmingMessageId = trimmingMessageId {
             conversation.messages = conversation.messages
                 .sorted{$0.createdAt < $1.createdAt}
                 .prefix(while: {$0.id.uuidString != trimmingMessageId})
         }
         
-        /// add system prompt to very first message in the conversation
+        // add system prompt to very first message in the conversation
         if !systemPrompt.isEmpty && conversation.messages.isEmpty {
             let systemMessage = MessageSD(content: systemPrompt, role: "system")
             systemMessage.conversation = conversation
         }
         
-        /// construct new message
+        // construct new message
         let userMessage = MessageSD(content: userPrompt, role: "user", image: image?.render()?.compressImageData())
         userMessage.conversation = conversation
         
-        /// prepare message history for Ollama
+        // prepare message history
         var messageHistory = conversation.messages
             .sorted{$0.createdAt < $1.createdAt}
             .map{OKChatRequestData.Message(role: OKChatRequestData.Message.Role(rawValue: $0.role) ?? .assistant, content: $0.content)}
         
-        
-        print(messageHistory.map({$0.content}))
-        
-        /// attach selected image to the last Message
+        // attach selected image to the last Message
         if let image = image?.render() {
             if let lastMessage = messageHistory.popLast() {
                 let imagesBase64: [String] = [image.convertImageToBase64String()]
@@ -163,26 +157,32 @@ final class ConversationStore: Sendable {
             try await reloadConversation(conversation)
             try? await loadConversations()
             
-            if await OllamaService.shared.ollamaKit.reachable() {
+            // Get the appropriate LLM implementation
+            let llm = LLMFactory.getLLM(for: model)
+            
+            // Check if the model is reachable
+            if await llm.reachable() {
                 DispatchQueue.global(qos: .background).async {
                     var request = OKChatRequestData(model: model.name, messages: messageHistory)
                     request.options = OKCompletionOptions(temperature: 0)
                     
-                    self.generation = OllamaService.shared.ollamaKit.chat(data: request)
+                    self.generation = llm.chat(data: request)
                         .sink(receiveCompletion: { [weak self] completion in
                             switch completion {
-                            case .finished:
-                                self?.handleComplete()
-                            case .failure(let error):
-                                self?.handleError(error.localizedDescription)
+                                case .finished:
+                                    self?.handleComplete()
+                                case .failure(let error):
+                                    self?.handleError(error.localizedDescription)
                             }
                         }, receiveValue: { [weak self] response in
                             self?.handleReceive(response)
                         })
-                    
                 }
             } else {
-                self.handleError("Server unreachable")
+                let errorMessage = model.modelProvider == .local
+                ? "Local model unavailable"
+                : "Ollama server unreachable"
+                self.handleError(errorMessage)
             }
         }
     }

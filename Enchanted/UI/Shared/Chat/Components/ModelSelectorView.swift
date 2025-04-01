@@ -17,13 +17,40 @@ struct ModelSelectorView: View {
         Menu {
             ForEach(modelsList, id: \.self) { model in
                 Button(action: {
-                    withAnimation(.easeOut) {    
+                    withAnimation(.easeOut) {
                         onSelectModel(model)
                     }
                 }) {
-                    Text(model.name)
-                        .font(.body)
-                        .tag(model.name)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(model.name)
+                                .font(.body)
+                                .tag(model.name)
+                            
+                            if model.modelProvider == .local {
+                                Text("Local inference")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        if model.modelProvider == .local {
+                            HStack(spacing: 2) {
+                                Image(systemName: "cpu")
+                                    .font(.caption)
+                                
+                                Text("Local")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green)
+                            .clipShape(Capsule())
+                        }
+                    }
                 }
             }
         } label: {
@@ -31,18 +58,52 @@ struct ModelSelectorView: View {
                 if let selectedModel = selectedModel {
                     HStack(alignment: .bottom, spacing: 5) {
                         
-                        #if os(macOS) || os(visionOS)
+#if os(macOS) || os(visionOS)
                         Text(selectedModel.name)
                             .font(.body)
-                        #elseif os(iOS)
-                        Text(selectedModel.prettyName )
-                            .font(.body)
-                            .foregroundColor(Color.labelCustom)
                         
-                        Text(selectedModel.prettyVersion)
-                            .font(.subheadline)
-                            .foregroundColor(Color.gray3Custom)
-                        #endif
+                        if selectedModel.modelProvider == .local {
+                            HStack(spacing: 2) {
+                                Image(systemName: "cpu")
+                                    .font(.caption)
+                                
+                                Text("Local")
+                                    .font(.caption)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green)
+                            .clipShape(Capsule())
+                        }
+#elseif os(iOS)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text(selectedModel.prettyName)
+                                    .font(.body)
+                                    .foregroundColor(Color.labelCustom)
+                                
+                                if selectedModel.modelProvider == .local {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "cpu")
+                                            .font(.caption)
+                                        
+                                        Text("Local")
+                                            .font(.caption)
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green)
+                                    .clipShape(Capsule())
+                                }
+                            }
+                            
+                            Text(selectedModel.prettyVersion)
+                                .font(.subheadline)
+                                .foregroundColor(Color.gray3Custom)
+                        }
+#endif
                     }
                 }
                 

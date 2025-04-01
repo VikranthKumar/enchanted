@@ -47,14 +47,30 @@ final class LanguageModelStore {
     }
     
     func loadModels() async throws {
+        // Get Ollama models
         let remoteModels = try await OllamaService.shared.getModels()
         try await swiftDataService.saveModels(models: remoteModels.map{LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .ollama)})
+        
+        // Get local models if enabled
+        let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+        var localModels: [LanguageModel] = []
+        
+        if useLocalInference {
+            localModels = try await LocalModelService.shared.getModels()
+            try await swiftDataService.saveModels(models: localModels.map{LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .local)})
+        }
         
         let storedModels = (try? await swiftDataService.fetchModels()) ?? []
         
         DispatchQueue.main.async {
             let remoteModelNames = remoteModels.map { $0.name }
-            self.models = storedModels.filter{remoteModelNames.contains($0.name)}
+            let localModelNames = localModels.map { $0.name }
+            
+            if useLocalInference {
+                self.models = storedModels.filter{remoteModelNames.contains($0.name) || localModelNames.contains($0.name)}
+            } else {
+                self.models = storedModels.filter{remoteModelNames.contains($0.name)}
+            }
         }
     }
     

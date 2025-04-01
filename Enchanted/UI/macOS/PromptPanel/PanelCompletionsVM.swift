@@ -45,7 +45,7 @@ final class CompletionsPanelVM {
             .init(role: .user, content: prompt)
         ]
         var request = OKChatRequestData(model: model.name, messages: messages)
-        request.options = OKCompletionOptions(temperature: Double(completion.modelTemperature ?? 0.8))
+        request.options = OKCompletionOptions(temperature: completion.modelTemperature ?? 0.8)
         currentMessageBuffer = ""
         messageResponse = ""
         

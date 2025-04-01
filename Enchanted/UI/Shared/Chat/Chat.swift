@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Chat: View, Sendable {
+struct SharedChatView: View, Sendable {
     @State private var languageModelStore: LanguageModelStore
     @State private var conversationStore: ConversationStore
     @State private var appStore: AppStore

@@ -1,5 +1,5 @@
 {
-  "originHash" : "dbf0308c34fb1ae2cfc4f1899ab154440f581adceff2846bf0efd2e2614903a9",
+  "originHash" : "8c0ef2d69c361210ae3e6621c81897068872c360c1e9933b4f70cc71675734c3",
   "pins" : [
     {
       "identity" : "activityindicatorview",
@@ -11,12 +11,29 @@
       }
     },
     {
+      "identity" : "alamofire",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Alamofire/Alamofire.git",
+      "state" : {
+        "revision" : "513364f870f6bfc468f9d2ff0a95caccc10044c5",
+        "version" : "5.10.2"
+      }
+    },
+    {
       "identity" : "keyboardshortcuts",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sindresorhus/KeyboardShortcuts",
       "state" : {
         "revision" : "045cf174010beb335fa1d2567d18c057b8787165",
         "version" : "2.3.0"
+      }
+    },
+    {
+      "identity" : "llama.cpp",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ggerganov/llama.cpp.git",
+      "state" : {
+        "revision" : "cc98896db858df7aa40d0e16a505883ef196a482"
       }
     },
     {
@@ -40,10 +57,10 @@
     {
       "identity" : "ollamakit",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/kevinhermawan/OllamaKit",
+      "location" : "https://github.com/AugustDev/OllamaKit",
       "state" : {
-        "revision" : "b6ff6a0c75a3756450cfb38074f6264be1314abc",
-        "version" : "5.0.8"
+        "branch" : "main",
+        "revision" : "0079411b4568dbc821c9e2589345d3f9b9538af4"
       }
     },
     {
@@ -98,6 +115,15 @@
       "state" : {
         "revision" : "5f613358148239d0292c0cef674a3c2314737f9e",
         "version" : "2.4.1"
+      }
+    },
+    {
+      "identity" : "swiftllama",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VikranthKumar/SwiftLlama",
+      "state" : {
+        "branch" : "main",
+        "revision" : "9df470e7c886a5669df5ac9b7f77c637bdc0848a"
       }
     },
     {

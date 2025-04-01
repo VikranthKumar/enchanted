@@ -24,8 +24,11 @@ final class AppStore {
     @MainActor var isReachable: Bool = true
     @MainActor var notifications: [NotificationMessage] = []
     @MainActor var menuBarIcon: String? = nil
+    @MainActor var isLocalInferenceEnabled: Bool = false
+
     var appState: AppState = .chat
 
+    @MainActor
     init() {
         if let storedIntervalString = UserDefaults.standard.string(forKey: "pingInterval") {
             pingInterval = Double(storedIntervalString) ?? 5
@@ -34,11 +37,24 @@ final class AppStore {
                 pingInterval = .infinity
             }
         }
+        
+        isLocalInferenceEnabled = UserDefaults.standard.bool(forKey: "useLocalInference")
+        
         startCheckingReachability(interval: pingInterval)
+        setupObservers()
     }
     
     deinit {
         stopCheckingReachability()
+    }
+    
+    func setupObservers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(userDefaultsDidChange), name: UserDefaults.didChangeNotification, object: nil)
+    }
+    
+    @MainActor
+    @objc private func userDefaultsDidChange() {
+        isLocalInferenceEnabled = UserDefaults.standard.bool(forKey: "useLocalInference")
     }
     
     private func startCheckingReachability(interval: TimeInterval = 5) {

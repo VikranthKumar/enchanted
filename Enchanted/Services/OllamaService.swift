@@ -28,7 +28,7 @@ class OllamaService: @unchecked Sendable {
             }
             
             if let url = URL(string: ollamaUrl) {
-                ollamaKit =  OllamaKit(baseURL: url)
+                ollamaKit =  OllamaKit(baseURL: url, bearerToken: bearerToken)
                 return
             }
         }

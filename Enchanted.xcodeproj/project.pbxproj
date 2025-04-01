@@ -3,12 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		3396E0762BD877D500213816 /* Menus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3396E0752BD877D500213816 /* Menus.swift */; };
-		FBF957672D9B90B50044BDFF /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FBF957662D9B90B50044BDFF /* OllamaKit */; };
+		FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BD92D9BDE6A0018FA8B /* SwiftLlama */; };
+		FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BE92D9C80AD0018FA8B /* OllamaKit */; };
 		FF0146CB2B3DA1DF00A2A9F6 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0146CA2B3DA1DF00A2A9F6 /* Settings.swift */; };
 		FF0146CD2B3DADCA00A2A9F6 /* HapticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0146CC2B3DADCA00A2A9F6 /* HapticsService.swift */; };
 		FF0611EA2C04A11800443B33 /* Magnet in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = FF0611E92C04A11800443B33 /* Magnet */; };
@@ -199,6 +200,10 @@
 		FFFD00C12B92607800392AE6 /* CompletionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		FB801BDB2D9BDE750018FA8B /* Local Inference */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Local Inference"; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		FFEC328A2B24779A003E5C04 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -209,9 +214,10 @@
 				FF79AEB62CE72ECE00EDE10C /* MarkdownUI in Frameworks */,
 				FF0611EA2C04A11800443B33 /* Magnet in Frameworks */,
 				FF911DF12B98F08800915E94 /* WrappingHStack in Frameworks */,
-				FBF957672D9B90B50044BDFF /* OllamaKit in Frameworks */,
+				FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */,
 				FF1002662B2653EE0011A4DC /* ActivityIndicatorView in Frameworks */,
 				FFFD00C92B94CB5E00392AE6 /* AsyncAlgorithms in Frameworks */,
+				FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */,
 				FF4A605D2BC3587800D7BD4F /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -466,6 +472,7 @@
 				FFEC32A42B247874003E5C04 /* Services */,
 				FF1002422B25BAC50011A4DC /* Stores */,
 				FF1002412B25BAAE0011A4DC /* SwiftData */,
+				FB801BDB2D9BDE750018FA8B /* Local Inference */,
 				FFEC32A52B247879003E5C04 /* UI */,
 			);
 			path = Enchanted;
@@ -579,6 +586,9 @@
 			);
 			dependencies = (
 			);
+			fileSystemSynchronizedGroups = (
+				FB801BDB2D9BDE750018FA8B /* Local Inference */,
+			);
 			name = Enchanted;
 			packageProductDependencies = (
 				FF1002652B2653EE0011A4DC /* ActivityIndicatorView */,
@@ -589,7 +599,8 @@
 				FF0611E92C04A11800443B33 /* Magnet */,
 				FF0611F02C04A2FB00443B33 /* Splash */,
 				FF79AEB52CE72ECE00EDE10C /* MarkdownUI */,
-				FBF957662D9B90B50044BDFF /* OllamaKit */,
+				FB801BD92D9BDE6A0018FA8B /* SwiftLlama */,
+				FB801BE92D9C80AD0018FA8B /* OllamaKit */,
 			);
 			productName = Enchanted;
 			productReference = FFEC328D2B24779A003E5C04 /* Enchanted.app */;
@@ -628,7 +639,8 @@
 				FF0611E82C04A11800443B33 /* XCRemoteSwiftPackageReference "Magnet" */,
 				FF0611EF2C04A2FB00443B33 /* XCRemoteSwiftPackageReference "Splash" */,
 				FF79AEB42CE72ECE00EDE10C /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
-				FBF957652D9B90B50044BDFF /* XCRemoteSwiftPackageReference "OllamaKit" */,
+				FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */,
+				FB801BE82D9C80AD0018FA8B /* XCRemoteSwiftPackageReference "OllamaKit" */,
 			);
 			productRefGroup = FFEC328E2B24779A003E5C04 /* Products */;
 			projectDirPath = "";
@@ -896,10 +908,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.enchanted.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -948,10 +960,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.enchanted.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -992,12 +1004,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		FBF957652D9B90B50044BDFF /* XCRemoteSwiftPackageReference "OllamaKit" */ = {
+		FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/kevinhermawan/OllamaKit";
+			repositoryURL = "https://github.com/VikranthKumar/SwiftLlama";
 			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 5.0.8;
+				branch = main;
+				kind = branch;
+			};
+		};
+		FB801BE82D9C80AD0018FA8B /* XCRemoteSwiftPackageReference "OllamaKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AugustDev/OllamaKit";
+			requirement = {
+				branch = main;
+				kind = branch;
 			};
 		};
 		FF0611E82C04A11800443B33 /* XCRemoteSwiftPackageReference "Magnet" */ = {
@@ -1067,9 +1087,14 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		FBF957662D9B90B50044BDFF /* OllamaKit */ = {
+		FB801BD92D9BDE6A0018FA8B /* SwiftLlama */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = FBF957652D9B90B50044BDFF /* XCRemoteSwiftPackageReference "OllamaKit" */;
+			package = FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */;
+			productName = SwiftLlama;
+		};
+		FB801BE92D9C80AD0018FA8B /* OllamaKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB801BE82D9C80AD0018FA8B /* XCRemoteSwiftPackageReference "OllamaKit" */;
 			productName = OllamaKit;
 		};
 		FF0611E92C04A11800443B33 /* Magnet */ = {

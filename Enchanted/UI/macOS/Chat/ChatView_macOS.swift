@@ -76,7 +76,7 @@ struct ChatView: View {
                     })
                 }
                 
-                if !reachable {
+                if !reachable && !(selectedModel?.modelProvider == .local) {
                     UnreachableAPIView()
                 }
                 

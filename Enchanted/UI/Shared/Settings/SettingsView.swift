@@ -27,6 +27,20 @@ struct SettingsView: View {
     var voices: [AVSpeechSynthesisVoice]
     
     @State private var deleteConversationsDialog = false
+    @AppStorage("useLocalInference") private var useLocalInference: Bool = false
+    @State private var showLocalModelsSheet = false
+    @State private var downloadedModelsCount: Int = 0
+    
+    func updateDownloadedModelsCount() {
+        Task {
+            if useLocalInference {
+                let models = try? await LocalModelService.shared.getModels()
+                DispatchQueue.main.async {
+                    downloadedModelsCount = models?.count ?? 0
+                }
+            }
+        }
+    }
     
     var body: some View {
         VStack {
@@ -62,6 +76,48 @@ struct SettingsView: View {
             .padding()
             
             Form {
+                Section(header: Text("LOCAL INFERENCE").font(.headline).padding(.top, 20)) {
+                    Toggle(isOn: $useLocalInference.onChange { newValue in
+                        if newValue {
+                            updateDownloadedModelsCount()
+                        }
+                    }, label: {
+                        Label("Use Local Inference", systemImage: "cpu")
+                            .foregroundStyle(Color.label)
+                    })
+                    
+                    Button(action: { showLocalModelsSheet.toggle() }) {
+                        HStack {
+                            Label("Manage Local Models", systemImage: "square.and.arrow.down")
+                                .foregroundStyle(Color.label)
+                            
+                            Spacer()
+                            
+                            if downloadedModelsCount > 0 {
+                                Text("\(downloadedModelsCount) models")
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        }
+                    }
+                    .disabled(!useLocalInference)
+                    .sheet(isPresented: $showLocalModelsSheet) {
+                        LocalModelsView()
+                    }
+                    
+                    if useLocalInference {
+                        Text("Models will run directly on your device without requiring an Ollama server")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Enables running LLMs directly on this device without requiring an Ollama server")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 Section(header: Text("Ollama").font(.headline)) {
                     
                     TextField("Ollama server URI", text: $ollamaUri, onCommit: checkServer)
@@ -194,6 +250,12 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Delete All Conversations?")
+        }
+        .onAppear {
+            updateDownloadedModelsCount()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDownloadCompleted"))) { _ in
+            updateDownloadedModelsCount()
         }
     }
 }

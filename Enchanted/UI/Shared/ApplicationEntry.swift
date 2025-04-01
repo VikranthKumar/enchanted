@@ -19,7 +19,7 @@ struct ApplicationEntry: View {
         VStack {
             switch appStore.appState {
             case .chat:
-                Chat(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
+                    SharedChatView(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
             case .voice:
                 Voice(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
             }

@@ -203,7 +203,7 @@ struct ChatView: View {
             ConversationStatusView(state: conversationState)
                 .padding()
             
-            if !reachable {
+            if !reachable && !(selectedModel?.modelProvider == .local) {
                 UnreachableAPIView()
             }
             

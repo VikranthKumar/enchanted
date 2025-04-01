@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct LanguageModel {
+struct LanguageModel: Hashable {
     var name: String
     var provider: ModelProvider
     var imageSupport: Bool
@@ -15,4 +15,5 @@ struct LanguageModel {
 
 enum ModelProvider: Codable {
     case ollama
+    case local
 }
