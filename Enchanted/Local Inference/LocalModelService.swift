@@ -11,6 +11,7 @@ import OllamaKit
 import SwiftUI
 import SwiftLlama
 
+@Observable
 class LocalModelService: @unchecked Sendable {
     static let shared = LocalModelService()
     
@@ -18,37 +19,13 @@ class LocalModelService: @unchecked Sendable {
     private let modelDirectoryURL: URL
     
     // Published properties for downloaded models and download progress
-    @Published var downloadProgress: [String: Double] = [:]
-    @Published var isDownloading: Bool = false
+    var downloadProgress: [String: Double] = [:]
+    var isDownloading: Bool = false
     
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var progressObservers: [String: NSKeyValueObservation] = [:]
     private var swiftLlamaInstances: [String: SwiftLlama] = [:]
     
-    // Predefined models
-    static let availableModels = [
-        ModelDownloadInfo(
-            name: "gemma-3-1b-it",
-            displayName: "Gemma 3 1B Instruct",
-            url: URL(string: "https://huggingface.co/lmstudio-community/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q3_K_L.gguf")!,
-            size: "1.1 GB",
-            promptFormat: .gemma
-        ),
-        ModelDownloadInfo(
-            name: "phi-2",
-            displayName: "Phi-2",
-            url: URL(string: "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q2_K.gguf")!,
-            size: "1.7 GB",
-            promptFormat: .phi
-        ),
-        ModelDownloadInfo(
-            name: "llama-3-1b-instruct",
-            displayName: "Llama 3.2 1B Instruct",
-            url: URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q3_K_L.gguf")!,
-            size: "1.4 GB",
-            promptFormat: .llama3
-        )
-    ]
     
     init() {
         // Create directory for storing models
@@ -130,12 +107,11 @@ class LocalModelService: @unchecked Sendable {
     
     // Download a model
     func downloadModel(model: ModelDownloadInfo) {
-        if isDownloading {
-            return
+        // Immediately set download progress to show UI feedback
+        DispatchQueue.main.async {
+            self.downloadProgress[model.name] = 0.0
+            self.isDownloading = true
         }
-        
-        isDownloading = true
-        downloadProgress[model.name] = 0.0
         
         let session = URLSession.shared
         let task = session.downloadTask(with: model.url) { [weak self] (tempURL, response, error) in
@@ -166,11 +142,17 @@ class LocalModelService: @unchecked Sendable {
                     
                     try fileManager.moveItem(at: tempURL, to: modelURL)
                     
+                    // Set progress to 1.0 to indicate completion
                     self.downloadProgress[model.name] = 1.0
-                    self.isDownloading = false
                     
-                    // Notify that download is complete
-                    NotificationCenter.default.post(name: NSNotification.Name("ModelDownloadCompleted"), object: nil)
+                    // Delay removing progress to ensure UI updates
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.downloadProgress[model.name] = nil
+                        self.isDownloading = self.downloadTasks.count > 0
+                        
+                        // Notify that download is complete
+                        NotificationCenter.default.post(name: NSNotification.Name("ModelDownloadCompleted"), object: nil)
+                    }
                 } catch {
                     print("Failed to save model: \(error)")
                     self.downloadProgress[model.name] = nil
@@ -210,6 +192,7 @@ class LocalModelService: @unchecked Sendable {
         let modelURL = modelDirectoryURL.appendingPathComponent("\(name).gguf")
         try FileManager.default.removeItem(at: modelURL)
         swiftLlamaInstances[name] = nil
+        NotificationCenter.default.post(name: NSNotification.Name("ModelDeleted"), object: name)
     }
     
     // Check if model exists
@@ -336,25 +319,15 @@ class LocalModelService: @unchecked Sendable {
         .eraseToAnyPublisher()
     }
     
-//    func tokenToResponse(token: String, model: String) -> OKChatResponse {
-//        return OKChatResponse(
-//            model: model,
-//            createdAt: Date(),
-//            message: OKChatResponse.Message(
-//                role: .assistant,
-//                content: token
-//            ),
-//            done: false
-//        )
-//    }
-    
     func tokenToResponse(token: String, model: String) -> OKChatResponse {
+        let processedToken = TokenSanitizer.sanitize(token: token)
+        
         // Use JSONSerialization to create the response
         let responseDict: [String: Any] = [
             "model": model,
             "message": [
                 "role": "assistant",
-                "content": token
+                "content": processedToken
             ],
             "done": false
         ]

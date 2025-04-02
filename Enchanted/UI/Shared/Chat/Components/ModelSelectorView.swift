@@ -6,14 +6,6 @@
 //
 
 import SwiftUI
-//
-//  ModelSelectorView.swift
-//  Enchanted
-//
-//  Created by Augustinas Malinauskas on 11/12/2023.
-//
-
-import SwiftUI
 
 struct ModelSelectorView: View {
     var modelsList: [LanguageModelSD]
@@ -149,9 +141,6 @@ struct ModelSelectorView: View {
                                         .clipShape(Capsule())
                                     }
                                     
-//                                    Text(selectedModel.prettyVersion)
-//                                        .font(.subheadline)
-//                                        .foregroundColor(Color.gray3Custom)
                                 }
 #endif
                             }
@@ -181,8 +170,10 @@ struct ModelSelectorView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDownloadCompleted"))) { _ in
                     loadLocalModels()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDeleted"))) { notification in
+                    loadLocalModels()
+                }
             } else {
-                // Regular Ollama model menu
                 Menu {
                     ForEach(modelsList.filter { $0.modelProvider == .ollama }, id: \.self) { model in
                         Button(action: {
@@ -242,13 +233,4 @@ struct ModelSelectorView: View {
             }
         }
     }
-}
-
-#Preview {
-    ModelSelectorView(
-        modelsList: LanguageModelSD.sample,
-        selectedModel: LanguageModelSD.sample[0],
-        onSelectModel: {_ in},
-        showChevron: false
-    )
 }

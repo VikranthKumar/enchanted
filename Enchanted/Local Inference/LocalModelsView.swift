@@ -76,7 +76,7 @@ struct LocalModelsView: View {
             Section(header: Text("Available Models")) {
                 ForEach(LocalModelService.availableModels) { model in
                     VStack(alignment: .leading) {
-                        HStack {
+                        HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(model.displayName)
                                     .font(.headline)
@@ -118,8 +118,10 @@ struct LocalModelsView: View {
                                 .buttonStyle(PlainButtonStyle())
                             } else if isDownloaded(model: model) {
                                 HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
+                                    if selectedLocalModel == model.name {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                    }
                                     
                                     Button(action: {
                                         do {
@@ -154,60 +156,11 @@ struct LocalModelsView: View {
                         }
                     }
                     .padding(.vertical, 8)
-                }
-            }
-            
-            Section(header: Text("Downloaded Models")) {
-                if downloadedModels.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("No models downloaded yet")
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 8)
-                        
-                        Button(action: {
-                            // Download first available model
-                            if let firstModel = LocalModelService.availableModels.first {
-                                localModelService.downloadModel(model: firstModel)
-                            }
-                        }) {
-                            Text("Download your first model")
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                } else {
-                    ForEach(downloadedModels, id: \.self) { model in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(model.name)
-                                    .font(.headline)
-                                
-                                Text("Ready for local inference")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if selectedLocalModel == model.name {
-                                Text("Active")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue)
-                                    .clipShape(Capsule())
-                            } else {
-                                Button(action: {
-                                    // Set as active model
-                                    selectedLocalModel = model.name
-                                    applyModelSelection(model.name)
-                                }) {
-                                    Text("Set as Active")
-                                        .font(.caption)
-                                }
-                                .buttonStyle(BorderedButtonStyle())
-                            }
+                    .background(Color.white)
+                    .onTapGesture {
+                        if isDownloaded(model: model) {
+                            selectedLocalModel = model.name
+                            applyModelSelection(model.name)
                         }
                     }
                 }
@@ -237,7 +190,7 @@ struct LocalModelsView: View {
         VStack {
             HStack {
                 Text("Local Models")
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.bold)
                 
                 Spacer()
@@ -246,7 +199,10 @@ struct LocalModelsView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             }
-            .padding()
+            .padding([.top, .horizontal])
+#if os(macOS)
+            .padding(.top, 20)
+#endif
             
             list
         }
