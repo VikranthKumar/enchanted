@@ -18,19 +18,28 @@ struct ApplicationEntry: View {
     var body: some View {
         VStack {
             switch appStore.appState {
-            case .chat:
+                case .chat:
                     SharedChatView(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
-            case .voice:
-                Voice(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
+                case .voice:
+                    Voice(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
             }
         }
         .task {
+            print("Application starting up")
             
             if let bundleIdentifier = Bundle.main.bundleIdentifier {
                 print("Bundle Identifier: \(bundleIdentifier)")
             } else {
                 print("Bundle Identifier not found.")
             }
+            
+            // Check if local inference is enabled
+            let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+            print("Local inference enabled: \(useLocalInference)")
+            
+            // Check selected local model
+            let selectedLocalModel = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
+            print("Selected local model: \(selectedLocalModel)")
             
             Task.detached {
                 async let loadModels: () = languageModelStore.loadModels()
@@ -41,8 +50,9 @@ struct ApplicationEntry: View {
                     _ = try await loadModels
                     _ = try await loadConversations
                     _ = try await loadCompletions
+                    print("Initial data loading completed successfully")
                 } catch {
-                    print("Unexpected error: \(error).")
+                    print("Error during initial data loading: \(error)")
                 }
             }
         }

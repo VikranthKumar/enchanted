@@ -10,6 +10,7 @@
 		3396E0762BD877D500213816 /* Menus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3396E0752BD877D500213816 /* Menus.swift */; };
 		FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BD92D9BDE6A0018FA8B /* SwiftLlama */; };
 		FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BE92D9C80AD0018FA8B /* OllamaKit */; };
+		FB801BF62D9CE90E0018FA8B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB801BF52D9CE90E0018FA8B /* Accelerate.framework */; };
 		FF0146CB2B3DA1DF00A2A9F6 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0146CA2B3DA1DF00A2A9F6 /* Settings.swift */; };
 		FF0146CD2B3DADCA00A2A9F6 /* HapticsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0146CC2B3DADCA00A2A9F6 /* HapticsService.swift */; };
 		FF0611EA2C04A11800443B33 /* Magnet in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = FF0611E92C04A11800443B33 /* Magnet */; };
@@ -108,6 +109,7 @@
 
 /* Begin PBXFileReference section */
 		3396E0752BD877D500213816 /* Menus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Menus.swift; sourceTree = "<group>"; };
+		FB801BF52D9CE90E0018FA8B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		FF0146CA2B3DA1DF00A2A9F6 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		FF0146CC2B3DADCA00A2A9F6 /* HapticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsService.swift; sourceTree = "<group>"; };
 		FF0611F22C04BEFD00443B33 /* AVSpeechSynthesisVoice+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AVSpeechSynthesisVoice+Extension.swift"; sourceTree = "<group>"; };
@@ -212,6 +214,7 @@
 				FFD5FAD22B8130490055AB51 /* Vortex in Frameworks */,
 				FF0611F12C04A2FB00443B33 /* Splash in Frameworks */,
 				FF79AEB62CE72ECE00EDE10C /* MarkdownUI in Frameworks */,
+				FB801BF62D9CE90E0018FA8B /* Accelerate.framework in Frameworks */,
 				FF0611EA2C04A11800443B33 /* Magnet in Frameworks */,
 				FF911DF12B98F08800915E94 /* WrappingHStack in Frameworks */,
 				FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */,
@@ -225,6 +228,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		FB801BF42D9CE90E0018FA8B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FB801BF52D9CE90E0018FA8B /* Accelerate.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		FF10022C2B2481790011A4DC /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -444,6 +455,7 @@
 			isa = PBXGroup;
 			children = (
 				FFEC328F2B24779A003E5C04 /* Enchanted */,
+				FB801BF42D9CE90E0018FA8B /* Frameworks */,
 				FFEC328E2B24779A003E5C04 /* Products */,
 			);
 			sourceTree = "<group>";

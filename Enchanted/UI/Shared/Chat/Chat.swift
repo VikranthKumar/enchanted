@@ -44,9 +44,27 @@ struct SharedChatView: View, Sendable {
     
     @MainActor
     func sendMessage(prompt: String, model: LanguageModelSD, image: Image?, trimmingMessageId: String?) {
+        // Add logging to help diagnose issues
+        print("Sending message with model \(model.name), provider: \(model.modelProvider?.rawValue ?? "unknown")")
+        
+        // Ensure the model is properly selected based on inference preference
+        let selectedModel: LanguageModelSD
+        if appStore.isLocalInferenceEnabled && model.modelProvider != .local {
+            if let localModel = languageModelStore.models.first(where: { $0.modelProvider == .local }) {
+                print("Switching to local model: \(localModel.name)")
+                selectedModel = localModel
+            } else {
+                print("No local model available, using provided model")
+                selectedModel = model
+            }
+        } else {
+            selectedModel = model
+        }
+        
+        // Send the prompt with the selected model
         conversationStore.sendPrompt(
             userPrompt: prompt,
-            model: model,
+            model: selectedModel,
             image: image,
             systemPrompt: systemPrompt,
             trimmingMessageId: trimmingMessageId

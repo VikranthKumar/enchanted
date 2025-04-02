@@ -223,19 +223,26 @@ final class ConversationStore: Sendable {
     
     @MainActor
     private func handleLocalInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
+        print("Starting local inference with model: \(model.name)")
+        
         DispatchQueue.global(qos: .background).async {
             var request = OKChatRequestData(model: model.name, messages: messageHistory)
             request.options = OKCompletionOptions(temperature: 0)
+            
+            print("Sending request to local model with \(messageHistory.count) messages")
             
             self.generation = LocalModelService.shared.chat(data: request)
                 .sink(receiveCompletion: { [weak self] completion in
                     switch completion {
                         case .finished:
+                            print("Local inference completed successfully")
                             self?.handleComplete()
                         case .failure(let error):
+                            print("Local inference error: \(error.localizedDescription)")
                             self?.handleError(error.localizedDescription)
                     }
                 }, receiveValue: { [weak self] response in
+                    print("Received local inference response: \(response.message?.content ?? "nil")")
                     self?.handleReceive(response)
                 })
         }

@@ -267,44 +267,25 @@ struct SettingsView: View {
     
     func selectLocalModel() {
         Task {
-            // Get available local models
-            let localModels = try? await LocalModelService.shared.getModels()
-            
+            let models = try? await LocalModelService.shared.getModels()
             DispatchQueue.main.async {
-                if let localModels = localModels, !localModels.isEmpty {
-                    var modelToSelect: String
+                if let firstModel = models?.first {
+                    print("Auto-selecting local model: \(firstModel.name)")
+                    selectedLocalModel = firstModel.name
                     
-                    // If we have a selected local model and it's in the available models, use it
-                    if !selectedLocalModel.isEmpty && localModels.contains(where: { $0.name == selectedLocalModel }) {
-                        modelToSelect = selectedLocalModel
+                    // Update the model in LanguageModelStore
+                    if let localModelSD = LanguageModelStore.shared.models.first(where: { $0.name == firstModel.name }) {
+                        LanguageModelStore.shared.setModel(model: localModelSD)
                     } else {
-                        // Otherwise use the first available model
-                        modelToSelect = localModels.first!.name
-                        selectedLocalModel = modelToSelect
-                    }
-                    
-                    // Directly update the language model store
-                    if let localModel = LanguageModelStore.shared.models.first(where: { $0.name == modelToSelect }) {
-                        LanguageModelStore.shared.setModel(model: localModel)
-                    } else {
-                        // Try to refresh models to find the local model
-                        Task {
-                            try? await LanguageModelStore.shared.loadModels()
-                            
-                            DispatchQueue.main.async {
-                                if let refreshedLocalModel = LanguageModelStore.shared.models.first(where: { $0.name == modelToSelect }) {
-                                    LanguageModelStore.shared.setModel(model: refreshedLocalModel)
-                                }
-                            }
-                        }
+                        print("Selected local model not found in LanguageModelStore")
                     }
                 } else {
-                    // Show local models sheet to prompt for download
-                    showLocalModelsSheet = true
+                    print("No local models available for auto-selection")
                 }
             }
         }
     }
+    
     func selectPreferredLocalModel() async {
         // Get available local models
         if let localModels = try? await LocalModelService.shared.getModels(),

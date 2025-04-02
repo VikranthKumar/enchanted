@@ -23,7 +23,12 @@ struct InputFieldsView: View {
     @FocusState private var isFocusedInput: Bool
     
     @MainActor private func sendMessage() {
-        guard let selectedModel = selectedModel else { return }
+        guard let selectedModel = selectedModel else {
+            print("No selected model available, cannot send message \(LanguageModelStore.shared.selectedModel)")
+            return
+        }
+        
+        print("Sending message with model: \(selectedModel.name), provider: \(selectedModel.modelProvider?.rawValue ?? "unknown")")
         
         onSendMessageTap(
             message,
