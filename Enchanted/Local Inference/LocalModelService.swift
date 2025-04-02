@@ -10,13 +10,8 @@ import Combine
 import OllamaKit
 import SwiftUI
 import SwiftLlama
-import Foundation
-import Combine
-import OllamaKit
-import SwiftUI
-import SwiftLlama
 
-class LocalModelService: @unchecked Sendable, LLM {
+class LocalModelService: @unchecked Sendable {
     static let shared = LocalModelService()
     
     // Model directory
