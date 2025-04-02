@@ -24,7 +24,7 @@ struct InputFieldsView: View {
     
     @MainActor private func sendMessage() {
         guard let selectedModel = selectedModel else {
-            print("No selected model available, cannot send message \(LanguageModelStore.shared.selectedModel)")
+            print("No selected model available, cannot send message")
             return
         }
         

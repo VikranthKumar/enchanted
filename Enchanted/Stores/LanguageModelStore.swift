@@ -13,7 +13,7 @@ final class LanguageModelStore {
     static let shared = LanguageModelStore(swiftDataService: SwiftDataService.shared)
     
     private var swiftDataService: SwiftDataService
-    @MainActor var models: [LanguageModelSD] = []
+    @MainActor var models: [LanguageModelSD] = [] // Initialize with empty array instead of nil
     @MainActor var supportsImages = false
     @MainActor var selectedModel: LanguageModelSD?
     
@@ -21,8 +21,139 @@ final class LanguageModelStore {
         self.swiftDataService = swiftDataService
     }
     
+    // Add initializer for models on startup
+    @MainActor
+    func initialize() async {
+        print("Initializing LanguageModelStore")
+        
+        // Check if we need to load local models
+        let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+        print("Local inference enabled: \(useLocalInference)")
+        
+        if useLocalInference {
+            // Try to load local models first
+            do {
+                try await loadLocalModelsOnly()
+                print("Successfully loaded local models")
+            } catch {
+                print("Failed to load local models: \(error)")
+            }
+        } else {
+            // Load regular Ollama models
+            do {
+                try await loadOllamaModels()
+                print("Successfully loaded Ollama models")
+            } catch {
+                print("Failed to load Ollama models: \(error)")
+            }
+        }
+        
+        // Make sure we have a selected model
+        selectPreferredModel()
+        
+        print("Model initialization complete. Models count: \(models.count), Selected model: \(selectedModel?.name ?? "none")")
+    }
+    
+    // Separate method to load only local models
+    @MainActor
+    func loadLocalModelsOnly() async throws {
+        print("Loading only local models")
+        
+        // Get local models
+        let localModels = try await LocalModelService.shared.getModels()
+        print("Found \(localModels.count) local models")
+        
+        // Save models to SwiftData
+        try await swiftDataService.saveModels(models: localModels.map {
+            LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .local)
+        })
+        
+        // Fetch all models from SwiftData
+        let storedModels = (try? await swiftDataService.fetchModels()) ?? []
+        let localModelNames = localModels.map { $0.name }
+        
+        // Filter to only include local models
+        models = storedModels.filter { localModelNames.contains($0.name) && $0.modelProvider == .local }
+        
+        print("Loaded \(models.count) local models")
+        
+        // Select a local model if available
+        if !models.isEmpty {
+            let selectedLocalModelName = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
+            
+            if !selectedLocalModelName.isEmpty,
+               let selectedLocalModel = models.first(where: { $0.name == selectedLocalModelName }) {
+                self.selectedModel = selectedLocalModel
+                print("Selected local model: \(selectedLocalModel.name)")
+            } else {
+                self.selectedModel = models.first
+                if let model = selectedModel {
+                    UserDefaults.standard.set(model.name, forKey: "selectedLocalModel")
+                    print("Auto-selected local model: \(model.name)")
+                }
+            }
+        }
+    }
+    
+    // Separate method to load only Ollama models
+    @MainActor
+    func loadOllamaModels() async throws {
+        print("Loading Ollama models")
+        
+        // Get Ollama models
+        let remoteModels = try await OllamaService.shared.getModels()
+        print("Found \(remoteModels.count) Ollama models")
+        
+        // Save models to SwiftData
+        try await swiftDataService.saveModels(models: remoteModels.map {
+            LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .ollama)
+        })
+        
+        // Fetch all models from SwiftData
+        let storedModels = (try? await swiftDataService.fetchModels()) ?? []
+        let remoteModelNames = remoteModels.map { $0.name }
+        
+        // Filter to only include Ollama models
+        models = storedModels.filter { remoteModelNames.contains($0.name) && $0.modelProvider == .ollama }
+        
+        print("Loaded \(models.count) Ollama models")
+        
+        // Select an Ollama model if available
+        if !models.isEmpty {
+            let defaultOllamaModel = UserDefaults.standard.string(forKey: "defaultOllamaModel") ?? ""
+            
+            if !defaultOllamaModel.isEmpty,
+               let selectedOllamaModel = models.first(where: { $0.name == defaultOllamaModel }) {
+                self.selectedModel = selectedOllamaModel
+                print("Selected default Ollama model: \(selectedOllamaModel.name)")
+            } else {
+                self.selectedModel = models.first
+                if let model = selectedModel {
+                    print("Auto-selected Ollama model: \(model.name)")
+                }
+            }
+        }
+    }
+    
+    // Modified loadModels to leverage the new methods
+    func loadModels() async throws {
+        print("Loading all models")
+        
+        let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+        
+        if useLocalInference {
+            // Load local models
+            try await loadLocalModelsOnly()
+        } else {
+            // Load Ollama models
+            try await loadOllamaModels()
+        }
+        
+    }
+    
     @MainActor
     func setModel(model: LanguageModelSD?) {
+        print(model)
         if let model = model {
             // check if model still exists
             if models.contains(model) {
@@ -87,34 +218,6 @@ final class LanguageModelStore {
                 }
                 
                 return
-            }
-        }
-    }
-    
-    func loadModels() async throws {
-        // Get Ollama models
-        let remoteModels = try await OllamaService.shared.getModels()
-        try await swiftDataService.saveModels(models: remoteModels.map{LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .ollama)})
-        
-        // Get local models if enabled
-        let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
-        var localModels: [LanguageModel] = []
-        
-        if useLocalInference {
-            localModels = try await LocalModelService.shared.getModels()
-            try await swiftDataService.saveModels(models: localModels.map{LanguageModelSD(name: $0.name, imageSupport: $0.imageSupport, modelProvider: .local)})
-        }
-        
-        let storedModels = (try? await swiftDataService.fetchModels()) ?? []
-        
-        DispatchQueue.main.async {
-            let remoteModelNames = remoteModels.map { $0.name }
-            let localModelNames = localModels.map { $0.name }
-            
-            if useLocalInference {
-                self.models = storedModels.filter{remoteModelNames.contains($0.name) || localModelNames.contains($0.name)}
-            } else {
-                self.models = storedModels.filter{remoteModelNames.contains($0.name)}
             }
         }
     }

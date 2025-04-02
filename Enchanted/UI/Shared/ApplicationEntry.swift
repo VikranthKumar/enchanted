@@ -14,18 +14,45 @@ struct ApplicationEntry: View {
     @State private var conversationStore = ConversationStore.shared
     @State private var completionsStore = CompletionsStore.shared
     @State private var appStore = AppStore.shared
+    @State private var isInitializing = true // Add this state
     
     var body: some View {
-        VStack {
-            switch appStore.appState {
-                case .chat:
-                    SharedChatView(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
-                case .voice:
-                    Voice(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
+        ZStack {
+            VStack {
+                switch appStore.appState {
+                    case .chat:
+                        SharedChatView(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
+                    case .voice:
+                        Voice(languageModelStore: languageModelStore, conversationStore: conversationStore, appStore: appStore)
+                }
+            }
+            
+            // Add a loading overlay during initialization
+            if isInitializing {
+                Color(.gray)
+                    .opacity(0.7)
+                    .edgesIgnoringSafeArea(.all)
+                
+                VStack {
+                    Text("Initializing...")
+                        .font(.headline)
+                    
+                    ProgressView()
+                        .padding()
+                    
+                    Text("Loading models and conversations")
+                        .font(.caption)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(10)
             }
         }
         .task {
             print("Application starting up")
+            
+            // Show the initializing overlay
+            isInitializing = true
             
             if let bundleIdentifier = Bundle.main.bundleIdentifier {
                 print("Bundle Identifier: \(bundleIdentifier)")
@@ -33,27 +60,23 @@ struct ApplicationEntry: View {
                 print("Bundle Identifier not found.")
             }
             
-            // Check if local inference is enabled
+            // Check local inference settings
             let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
             print("Local inference enabled: \(useLocalInference)")
             
-            // Check selected local model
-            let selectedLocalModel = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
-            print("Selected local model: \(selectedLocalModel)")
+            // Initialize model store first
+            await LocalModelService.shared.initializeModels()
+            await languageModelStore.initialize()
             
-            Task.detached {
-                async let loadModels: () = languageModelStore.loadModels()
-                async let loadConversations: () = conversationStore.loadConversations()
-                async let loadCompletions: () = completionsStore.load()
-                
-                do {
-                    _ = try await loadModels
-                    _ = try await loadConversations
-                    _ = try await loadCompletions
-                    print("Initial data loading completed successfully")
-                } catch {
-                    print("Error during initial data loading: \(error)")
-                }
+            // Then load conversations
+            try? await conversationStore.loadConversations()
+            
+            // Load completions
+            completionsStore.load()
+            
+            // Hide the loading overlay
+            DispatchQueue.main.async {
+                isInitializing = false
             }
         }
         .preferredColorScheme(colorScheme.toiOSFormat)

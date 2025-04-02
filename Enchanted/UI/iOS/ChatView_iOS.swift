@@ -98,12 +98,25 @@ struct ChatView: View {
                 
                 Spacer()
                 
+                
+                
+                // Add local model selector when local inference is enabled
+//                if UserDefaults.standard.bool(forKey: "useLocalInference") {
+//                    LocalModelQuickSelector_iOS { modelName in
+//                        // Use the setModelByName method for proper selection
+//                        Task { @MainActor in
+//                            LanguageModelStore.shared.setModelByName(modelName: modelName)
+//                        }
+//                    }
+//                    .padding(.horizontal, 12)
+//                }
+                
                 ModelSelectorView(
                     modelsList: modelsList,
                     selectedModel: selectedModel,
                     onSelectModel: onSelectModel
                 )
-                .showIf(!modelsList.isEmpty)
+//                .showIf(!modelsList.isEmpty)
                 
                 Spacer()
                 
@@ -115,17 +128,6 @@ struct ChatView: View {
                         .frame(width: 22)
                         .foregroundColor(Color(.label))
                 }
-            }
-            
-            // Add local model selector when local inference is enabled
-            if UserDefaults.standard.bool(forKey: "useLocalInference") {
-                LocalModelQuickSelector_iOS { modelName in
-                    // Use the setModelByName method for proper selection
-                    Task { @MainActor in
-                        LanguageModelStore.shared.setModelByName(modelName: modelName)
-                    }
-                }
-                .padding(.horizontal, 12)
             }
         }
     }

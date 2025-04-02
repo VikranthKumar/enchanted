@@ -16,6 +16,16 @@ struct ToolbarView: View {
     var copyChat: (_ json: Bool) -> ()
     
     var body: some View {
+        
+//        if UserDefaults.standard.bool(forKey: "useLocalInference") {
+//            LocalModelQuickSelector { modelName in
+//                // Use the setModelByName method for proper selection
+//                Task { @MainActor in
+//                    LanguageModelStore.shared.setModelByName(modelName: modelName)
+//                }
+//            }
+//        }
+        
         ModelSelectorView(
             modelsList: modelsList,
             selectedModel: selectedModel,

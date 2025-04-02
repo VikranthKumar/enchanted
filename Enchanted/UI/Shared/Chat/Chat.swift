@@ -33,38 +33,54 @@ struct SharedChatView: View, Sendable {
     
     @MainActor
     func updateSelectedModel() {
+        print("Updating selected model. Current model: \(languageModelStore.selectedModel?.name ?? "none")")
+        print("Available models: \(languageModelStore.models.map { $0.name }.joined(separator: ", "))")
+        
+        // Check if we have a selected model
         if languageModelStore.selectedModel == nil {
-            if defaultOllamaModel != "" {
-                languageModelStore.setModel(modelName: defaultOllamaModel)
+            // Try to select a model based on settings
+            let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+            
+            if useLocalInference {
+                // Try to select a local model
+                let selectedLocalModel = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
+                
+                if !selectedLocalModel.isEmpty {
+                    languageModelStore.setModel(modelName: selectedLocalModel)
+                    print("Set model to selected local model: \(selectedLocalModel)")
+                } else if let firstLocalModel = languageModelStore.models.first(where: { $0.modelProvider == .local }) {
+                    languageModelStore.setModel(model: firstLocalModel)
+                    print("Set model to first local model: \(firstLocalModel.name)")
+                }
             } else {
-                languageModelStore.setModel(model: languageModelStore.models.first)
+                // Try to select an Ollama model
+                if defaultOllamaModel != "" {
+                    languageModelStore.setModel(modelName: defaultOllamaModel)
+                    print("Set model to default Ollama model: \(defaultOllamaModel)")
+                } else if let firstModel = languageModelStore.models.first {
+                    languageModelStore.setModel(model: firstModel)
+                    print("Set model to first available model: \(firstModel.name)")
+                }
             }
         }
+        
+        print("Selected model after update: \(languageModelStore.selectedModel?.name ?? "none")")
     }
     
+    // Check if we have valid models before sending message
     @MainActor
-    func sendMessage(prompt: String, model: LanguageModelSD, image: Image?, trimmingMessageId: String?) {
-        // Add logging to help diagnose issues
-        print("Sending message with model \(model.name), provider: \(model.modelProvider?.rawValue ?? "unknown")")
-        
-        // Ensure the model is properly selected based on inference preference
-        let selectedModel: LanguageModelSD
-        if appStore.isLocalInferenceEnabled && model.modelProvider != .local {
-            if let localModel = languageModelStore.models.first(where: { $0.modelProvider == .local }) {
-                print("Switching to local model: \(localModel.name)")
-                selectedModel = localModel
-            } else {
-                print("No local model available, using provided model")
-                selectedModel = model
-            }
-        } else {
-            selectedModel = model
+    func sendMessage(prompt: String, model: LanguageModelSD?, image: Image?, trimmingMessageId: String?) {
+        // Verify we have a model
+        guard let modelToUse = model ?? languageModelStore.selectedModel else {
+            print("ERROR: No model available to send message")
+            return
         }
         
-        // Send the prompt with the selected model
+        print("Sending message with model: \(modelToUse.name), provider: \(modelToUse.modelProvider?.rawValue ?? "unknown")")
+        
         conversationStore.sendPrompt(
             userPrompt: prompt,
-            model: selectedModel,
+            model: modelToUse,
             image: image,
             systemPrompt: systemPrompt,
             trimmingMessageId: trimmingMessageId

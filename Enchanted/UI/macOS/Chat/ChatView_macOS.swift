@@ -114,14 +114,6 @@ struct ChatView: View {
 
                 
                 ToolbarItemGroup(placement: .automatic) {
-                    if UserDefaults.standard.bool(forKey: "useLocalInference") {
-                        LocalModelQuickSelector { modelName in
-                            // Use the setModelByName method for proper selection
-                            Task { @MainActor in
-                                LanguageModelStore.shared.setModelByName(modelName: modelName)
-                            }
-                        }
-                    }
                     ToolbarView(
                         modelsList: modelsList,
                         selectedModel: selectedModel,

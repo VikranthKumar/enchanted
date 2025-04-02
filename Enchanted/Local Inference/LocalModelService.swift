@@ -72,22 +72,65 @@ class LocalModelService: @unchecked Sendable, LLM {
         self.modelDirectoryURL = modelsDirectory
     }
     
-    // Get available local models
-    func getModels() async throws -> [LanguageModel] {
+    func initializeModels() async {
+        print("Initializing local models directory")
+        
         let fileManager = FileManager.default
+        
+        // Ensure the models directory exists
+        if !fileManager.fileExists(atPath: modelDirectoryURL.path) {
+            do {
+                try fileManager.createDirectory(at: modelDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+                print("Created models directory at: \(modelDirectoryURL.path)")
+            } catch {
+                print("Failed to create models directory: \(error)")
+            }
+        }
+        
+        // Check what models are available
+        do {
+            let modelFiles = try fileManager.contentsOfDirectory(at: modelDirectoryURL, includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension == "gguf" }
+            
+            print("Found \(modelFiles.count) local model files:")
+            for file in modelFiles {
+                print("- \(file.lastPathComponent)")
+            }
+        } catch {
+            print("Failed to list local models: \(error)")
+        }
+    }
+    
+    // Update getModels to check directory first
+    func getModels() async throws -> [LanguageModel] {
+        print("Checking for local models at: \(modelDirectoryURL.path)")
+        
+        let fileManager = FileManager.default
+        
+        // Make sure directory exists
+        if !fileManager.fileExists(atPath: modelDirectoryURL.path) {
+            try fileManager.createDirectory(at: modelDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+            print("Created models directory")
+            return []
+        }
         
         // Get downloaded models
         let modelFiles = try fileManager.contentsOfDirectory(at: modelDirectoryURL, includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "gguf" }
         
-        return modelFiles.map { fileURL in
+        print("Found \(modelFiles.count) local model files")
+        
+        let models = modelFiles.map { fileURL in
             let modelName = fileURL.deletingPathExtension().lastPathComponent
+            print("Found local model: \(modelName)")
             return LanguageModel(
                 name: modelName,
                 provider: .local,
-                imageSupport: false // GGUF models typically don't support images
+                imageSupport: false
             )
         }
+        
+        return models
     }
     
     // Download a model
