@@ -46,6 +46,51 @@ final class LanguageModelStore {
         }
     }
     
+    @MainActor
+    func selectPreferredModel() {
+        let useLocalInference = UserDefaults.standard.bool(forKey: "useLocalInference")
+        let selectedLocalModelName = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
+        
+        if useLocalInference {
+            // Try to find the selected local model first if one is specified
+            if !selectedLocalModelName.isEmpty {
+                if let localModel = models.first(where: { $0.name == selectedLocalModelName && $0.modelProvider == .local }) {
+                    selectedModel = localModel
+                    return
+                }
+            }
+            
+            // Try to find any local model if selected one not found
+            if let localModel = models.first(where: { $0.modelProvider == .local }) {
+                selectedModel = localModel
+                // Update selected model name
+                UserDefaults.standard.set(localModel.name, forKey: "selectedLocalModel")
+                return
+            }
+        }
+        
+        // Fall back to Ollama model if needed or if local inference is disabled
+        if let ollamaModel = models.first(where: { $0.modelProvider == .ollama }) {
+            selectedModel = ollamaModel
+        }
+    }
+    
+    @MainActor
+    func setModelByName(modelName: String) {
+        for model in models {
+            if model.name == modelName {
+                selectedModel = model
+                
+                // If this is a local model, update the selected local model preference
+                if model.modelProvider == .local {
+                    UserDefaults.standard.set(model.name, forKey: "selectedLocalModel")
+                }
+                
+                return
+            }
+        }
+    }
+    
     func loadModels() async throws {
         // Get Ollama models
         let remoteModels = try await OllamaService.shared.getModels()

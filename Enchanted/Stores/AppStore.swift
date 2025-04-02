@@ -54,7 +54,29 @@ final class AppStore {
     
     @MainActor
     @objc private func userDefaultsDidChange() {
-        isLocalInferenceEnabled = UserDefaults.standard.bool(forKey: "useLocalInference")
+        let newValue = UserDefaults.standard.bool(forKey: "useLocalInference")
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.isLocalInferenceEnabled = newValue
+            
+            // Force update reachability state for UI consistency
+            if newValue {
+                self?.isReachable = true
+            } else {
+                // Check Ollama reachability if local inference is disabled
+                Task {
+                    self?.updateReachable(await OllamaService.shared.reachable())
+                }
+            }
+        }
+    }
+    
+    private func reachable() async -> Bool {
+        if UserDefaults.standard.bool(forKey: "useLocalInference") {
+            return true // Always consider reachable when local inference is enabled
+        }
+        
+        return await OllamaService.shared.reachable()
     }
     
     private func startCheckingReachability(interval: TimeInterval = 5) {
@@ -77,11 +99,6 @@ final class AppStore {
     private func stopCheckingReachability() {
         timer?.invalidate()
         timer = nil
-    }
-
-    private func reachable() async -> Bool {
-        let status = await OllamaService.shared.reachable()
-        return status
     }
     
     @MainActor func uiLog(message: String, status: NotificationMessage.Status) {

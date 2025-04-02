@@ -30,6 +30,8 @@ struct SettingsView: View {
     @AppStorage("useLocalInference") private var useLocalInference: Bool = false
     @State private var showLocalModelsSheet = false
     @State private var downloadedModelsCount: Int = 0
+    @AppStorage("selectedLocalModel") private var selectedLocalModel: String = ""
+
     
     func updateDownloadedModelsCount() {
         Task {
@@ -80,6 +82,7 @@ struct SettingsView: View {
                     Toggle(isOn: $useLocalInference.onChange { newValue in
                         if newValue {
                             updateDownloadedModelsCount()
+                            selectLocalModel() // Auto-select a local model
                         }
                     }, label: {
                         Label("Use Local Inference", systemImage: "cpu")
@@ -253,9 +256,67 @@ struct SettingsView: View {
         }
         .onAppear {
             updateDownloadedModelsCount()
+            if useLocalInference && LanguageModelStore.shared.selectedModel?.modelProvider != .local {
+                selectLocalModel()
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDownloadCompleted"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocalModelSelected"))) { _ in
             updateDownloadedModelsCount()
+        }
+    }
+    
+    func selectLocalModel() {
+        Task {
+            // Get available local models
+            let localModels = try? await LocalModelService.shared.getModels()
+            
+            DispatchQueue.main.async {
+                if let localModels = localModels, !localModels.isEmpty {
+                    var modelToSelect: String
+                    
+                    // If we have a selected local model and it's in the available models, use it
+                    if !selectedLocalModel.isEmpty && localModels.contains(where: { $0.name == selectedLocalModel }) {
+                        modelToSelect = selectedLocalModel
+                    } else {
+                        // Otherwise use the first available model
+                        modelToSelect = localModels.first!.name
+                        selectedLocalModel = modelToSelect
+                    }
+                    
+                    // Directly update the language model store
+                    if let localModel = LanguageModelStore.shared.models.first(where: { $0.name == modelToSelect }) {
+                        LanguageModelStore.shared.setModel(model: localModel)
+                    } else {
+                        // Try to refresh models to find the local model
+                        Task {
+                            try? await LanguageModelStore.shared.loadModels()
+                            
+                            DispatchQueue.main.async {
+                                if let refreshedLocalModel = LanguageModelStore.shared.models.first(where: { $0.name == modelToSelect }) {
+                                    LanguageModelStore.shared.setModel(model: refreshedLocalModel)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Show local models sheet to prompt for download
+                    showLocalModelsSheet = true
+                }
+            }
+        }
+    }
+    func selectPreferredLocalModel() async {
+        // Get available local models
+        if let localModels = try? await LocalModelService.shared.getModels(),
+           !localModels.isEmpty {
+            // Select the first available local model
+            DispatchQueue.main.async {
+                let localModelName = localModels.first!.name
+                // Find the corresponding LanguageModelSD
+                if let localModel = LanguageModelStore.shared.models.first(where: { $0.name == localModelName }) {
+                    LanguageModelStore.shared.setModel(model: localModel)
+                }
+            }
         }
     }
 }

@@ -31,6 +31,13 @@ final class ConversationStore: Sendable {
     @MainActor var conversations: [ConversationSD] = []
     @MainActor var selectedConversation: ConversationSD?
     @MainActor var messages: [MessageSD] = []
+    // Add this property to ConversationStore
+    @MainActor private var useLocalInference: Bool {
+        UserDefaults.standard.bool(forKey: "useLocalInference")
+    }
+    @MainActor private var selectedLocalModel: String {
+        UserDefaults.standard.string(forKey: "selectedLocalModel") ?? ""
+    }
     
     init(swiftDataService: SwiftDataService) {
         self.swiftDataService = swiftDataService
@@ -110,9 +117,19 @@ final class ConversationStore: Sendable {
     func sendPrompt(userPrompt: String, model: LanguageModelSD, image: Image? = nil, systemPrompt: String = "", trimmingMessageId: String? = nil) {
         guard userPrompt.trimmingCharacters(in: .whitespacesAndNewlines).count > 0 else { return }
         
+        // Determine appropriate model based on inference preference
+        var selectedModel = model
+        
+        // If local inference is enabled, but an Ollama model is selected, try to find a local model
+        if useLocalInference && model.modelProvider != .local {
+            if let localModel = LanguageModelStore.shared.models.first(where: { $0.modelProvider == .local }) {
+                selectedModel = localModel
+            }
+        }
+        
         let conversation = selectedConversation ?? ConversationSD(name: userPrompt)
         conversation.updatedAt = Date.now
-        conversation.model = model
+        conversation.model = selectedModel
         
         // trim conversation if on edit mode
         if let trimmingMessageId = trimmingMessageId {
@@ -157,33 +174,90 @@ final class ConversationStore: Sendable {
             try await reloadConversation(conversation)
             try? await loadConversations()
             
-            // Get the appropriate LLM implementation
-            let llm = LLMFactory.getLLM(for: model)
-            
-            // Check if the model is reachable
-            if await llm.reachable() {
-                DispatchQueue.global(qos: .background).async {
-                    var request = OKChatRequestData(model: model.name, messages: messageHistory)
-                    request.options = OKCompletionOptions(temperature: 0)
-                    
-                    self.generation = llm.chat(data: request)
-                        .sink(receiveCompletion: { [weak self] completion in
-                            switch completion {
-                                case .finished:
-                                    self?.handleComplete()
-                                case .failure(let error):
-                                    self?.handleError(error.localizedDescription)
-                            }
-                        }, receiveValue: { [weak self] response in
-                            self?.handleReceive(response)
-                        })
+            // Determine which service to use based on model provider
+            if selectedModel.modelProvider == .local {
+                // Always use local service if model is local
+                handleLocalInference(selectedModel, messageHistory)
+            } else if await OllamaService.shared.reachable() {
+                // Use Ollama if server is reachable
+                handleOllamaInference(selectedModel, messageHistory)
+            } else if useLocalInference {
+                // Fall back to local inference if Ollama unreachable but local is enabled
+                if let localModel = await findAvailableLocalModel() {
+                    // Update conversation to use local model
+                    conversation.model = localModel
+                    try? await swiftDataService.updateConversation(conversation)
+                    handleLocalInference(localModel, messageHistory)
+                } else {
+                    self.handleError("No local models available. Please download a model in Settings.")
                 }
             } else {
-                let errorMessage = model.modelProvider == .local
-                ? "Local model unavailable"
-                : "Ollama server unreachable"
-                self.handleError(errorMessage)
+                self.handleError("Ollama server unreachable")
             }
+        }
+    }
+    
+    @MainActor
+    private func findAvailableLocalModel() async -> LanguageModelSD? {
+        // Check if a specific local model is selected
+        if !selectedLocalModel.isEmpty {
+            // Try to find the selected model first
+            if let selectedModel = LanguageModelStore.shared.models.first(where: { $0.name == selectedLocalModel }) {
+                return selectedModel
+            }
+        }
+        
+        // Check if any local models are available as fallback
+        let localModels = try? await LocalModelService.shared.getModels()
+        if let localModels = localModels, !localModels.isEmpty {
+            // If we have models but not the selected one, update the selection
+            let localModelName = localModels.first!.name
+            UserDefaults.standard.set(localModelName, forKey: "selectedLocalModel")
+            
+            // Find the corresponding LanguageModelSD
+            return LanguageModelStore.shared.models.first(where: { $0.name == localModelName })
+        }
+        
+        return nil
+    }
+    
+    @MainActor
+    private func handleLocalInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
+        DispatchQueue.global(qos: .background).async {
+            var request = OKChatRequestData(model: model.name, messages: messageHistory)
+            request.options = OKCompletionOptions(temperature: 0)
+            
+            self.generation = LocalModelService.shared.chat(data: request)
+                .sink(receiveCompletion: { [weak self] completion in
+                    switch completion {
+                        case .finished:
+                            self?.handleComplete()
+                        case .failure(let error):
+                            self?.handleError(error.localizedDescription)
+                    }
+                }, receiveValue: { [weak self] response in
+                    self?.handleReceive(response)
+                })
+        }
+    }
+    
+    @MainActor
+    private func handleOllamaInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
+        DispatchQueue.global(qos: .background).async {
+            var request = OKChatRequestData(model: model.name, messages: messageHistory)
+            request.options = OKCompletionOptions(temperature: 0)
+            
+            self.generation = OllamaService.shared.ollamaKit.chat(data: request)
+                .sink(receiveCompletion: { [weak self] completion in
+                    switch completion {
+                        case .finished:
+                            self?.handleComplete()
+                        case .failure(let error):
+                            self?.handleError(error.localizedDescription)
+                    }
+                }, receiveValue: { [weak self] response in
+                    self?.handleReceive(response)
+                })
         }
     }
     

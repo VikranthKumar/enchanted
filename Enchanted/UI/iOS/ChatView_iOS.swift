@@ -85,34 +85,47 @@ struct ChatView: View {
     }
     
     var header: some View {
-        HStack(alignment: .center) {
-            Button(action: onMenuTap) {
-                Image(systemName: "line.3.horizontal")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 22)
-                    .foregroundColor(Color(.label))
+        VStack(spacing: 10) {
+            HStack(alignment: .center) {
+                Button(action: onMenuTap) {
+                    Image(systemName: "line.3.horizontal")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22)
+                        .foregroundColor(Color(.label))
+                }
+                
+                Spacer()
+                
+                ModelSelectorView(
+                    modelsList: modelsList,
+                    selectedModel: selectedModel,
+                    onSelectModel: onSelectModel
+                )
+                .showIf(!modelsList.isEmpty)
+                
+                Spacer()
+                
+                Button(action: onNewConversationTap) {
+                    Image(systemName: "square.and.pencil")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22)
+                        .foregroundColor(Color(.label))
+                }
             }
             
-            Spacer()
-            
-            ModelSelectorView(
-                modelsList: modelsList,
-                selectedModel: selectedModel,
-                onSelectModel: onSelectModel
-            )
-            .showIf(!modelsList.isEmpty)
-            
-            Spacer()
-            
-            Button(action: onNewConversationTap) {
-                Image(systemName: "square.and.pencil")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 22)
-                    .foregroundColor(Color(.label))
+            // Add local model selector when local inference is enabled
+            if UserDefaults.standard.bool(forKey: "useLocalInference") {
+                LocalModelQuickSelector_iOS { modelName in
+                    // Use the setModelByName method for proper selection
+                    Task { @MainActor in
+                        LanguageModelStore.shared.setModelByName(modelName: modelName)
+                    }
+                }
+                .padding(.horizontal, 12)
             }
         }
     }
@@ -203,7 +216,7 @@ struct ChatView: View {
             ConversationStatusView(state: conversationState)
                 .padding()
             
-            if !reachable && !(selectedModel?.modelProvider == .local) {
+            if !reachable && !UserDefaults.standard.bool(forKey: "useLocalInference") {
                 UnreachableAPIView()
             }
             
