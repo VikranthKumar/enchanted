@@ -40,8 +40,6 @@ struct LocalModelsView: View {
     
     func getPromptFormatName(_ format: ModelPromptFormat) -> String {
         switch format {
-            case .llama2:
-                return "Llama 2"
             case .llama3:
                 return "Llama 3"
             case .gemma:

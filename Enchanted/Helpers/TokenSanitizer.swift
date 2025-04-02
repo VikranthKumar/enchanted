@@ -5,10 +5,27 @@
 //  Created by Vikranth Kumar on 4/2/25.
 //
 
-import Foundation
+import Combine
 
 /// A class to process and filter tokens from local inference models
 class TokenSanitizer {
+    
+    static let specialTokensToFilter = [
+        // Basic markers
+        "<s>", "</s>", "<pad>", "<eos>", "<bos>",
+        
+        // Llama family
+        "<|im_start|>", "<|im_end|>", "<|endoftext|>",
+        
+        // Gemma family
+        "<start_of_turn>", "<end_of_turn>",
+        
+        // Phi family
+        "<|phi|>", "<|end|>", "<|user|>", "<|assistant|>",
+        
+        // Mistral family
+        "<s>", "</s>", "<unk>"
+    ]
     
     /// Sanitizes raw tokens from llama.cpp before processing
     /// - Parameter token: The raw token string from llama.cpp
@@ -16,14 +33,16 @@ class TokenSanitizer {
     static func sanitize(token: String) -> String {
         var sanitizedToken = token
         
+        
         // 1. Handle special tokens that might come from the model
-        if token == "<s>" || token == "</s>" || token == "<pad>" {
+        if TokenSanitizer.specialTokensToFilter.contains(token) {
             return ""
         }
         
         // 2. Remove any BOS (Beginning of Sequence) or EOS (End of Sequence) tokens
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "^<s>|</s>$", with: "", options: .regularExpression)
-        
+        sanitizedToken = sanitizedToken.replacingOccurrences(of: "<\\|[^\\|]+\\|>", with: "", options: .regularExpression)
+
         // 3. Handle potential control characters
         sanitizedToken = sanitizedToken.filter { char in
             // Allow only printable characters, newlines, and tabs

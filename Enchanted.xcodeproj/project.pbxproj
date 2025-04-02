@@ -3,11 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		3396E0762BD877D500213816 /* Menus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3396E0752BD877D500213816 /* Menus.swift */; };
+		FB6559DB2D9D23D2004D5399 /* LocalModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D72D9D23D2004D5399 /* LocalModelService.swift */; };
+		FB6559DC2D9D23D2004D5399 /* LocalModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */; };
+		FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */; };
+		FB6559E22D9D2A50004D5399 /* TokenSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */; };
 		FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BD92D9BDE6A0018FA8B /* SwiftLlama */; };
 		FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BE92D9C80AD0018FA8B /* OllamaKit */; };
 		FB801BF62D9CE90E0018FA8B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB801BF52D9CE90E0018FA8B /* Accelerate.framework */; };
@@ -109,6 +113,10 @@
 
 /* Begin PBXFileReference section */
 		3396E0752BD877D500213816 /* Menus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Menus.swift; sourceTree = "<group>"; };
+		FB6559D72D9D23D2004D5399 /* LocalModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelService.swift; sourceTree = "<group>"; };
+		FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelsView.swift; sourceTree = "<group>"; };
+		FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailableModels.swift; sourceTree = "<group>"; };
+		FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenSanitizer.swift; sourceTree = "<group>"; };
 		FB801BF52D9CE90E0018FA8B /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		FF0146CA2B3DA1DF00A2A9F6 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		FF0146CC2B3DADCA00A2A9F6 /* HapticsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsService.swift; sourceTree = "<group>"; };
@@ -202,10 +210,6 @@
 		FFFD00C12B92607800392AE6 /* CompletionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionsStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		FB801BDB2D9BDE750018FA8B /* Local Inference */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Local Inference"; sourceTree = "<group>"; };
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		FFEC328A2B24779A003E5C04 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -228,6 +232,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		FB6559E42D9D43F2004D5399 /* LocalModels */ = {
+			isa = PBXGroup;
+			children = (
+				FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */,
+			);
+			path = LocalModels;
+			sourceTree = "<group>";
+		};
 		FB801BF42D9CE90E0018FA8B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -358,6 +370,7 @@
 				FFE21C772B82353A00A69B9C /* SleepTest.swift */,
 				FF6D82142B911536001183A8 /* Accessibility.swift */,
 				FF6D82242B9204F3001183A8 /* AsyncQueue.swift */,
+				FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -484,7 +497,6 @@
 				FFEC32A42B247874003E5C04 /* Services */,
 				FF1002422B25BAC50011A4DC /* Stores */,
 				FF1002412B25BAAE0011A4DC /* SwiftData */,
-				FB801BDB2D9BDE750018FA8B /* Local Inference */,
 				FFEC32A52B247879003E5C04 /* UI */,
 			);
 			path = Enchanted;
@@ -546,6 +558,8 @@
 				FF10024F2B25C79F0011A4DC /* SwiftDataService.swift */,
 				FF6B7B122B3EE7AC00E8FEA3 /* Throttler.swift */,
 				FFCF00F02C03209A00590E79 /* SpeechService.swift */,
+				FB6559D72D9D23D2004D5399 /* LocalModelService.swift */,
+				FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -570,6 +584,7 @@
 				FFB56F442C0383A60020AFFD /* Voice */,
 				FF10026B2B2751630011A4DC /* Settings */,
 				FF1002552B2624790011A4DC /* Sidebar */,
+				FB6559E42D9D43F2004D5399 /* LocalModels */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -597,9 +612,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				FB801BDB2D9BDE750018FA8B /* Local Inference */,
 			);
 			name = Enchanted;
 			packageProductDependencies = (
@@ -688,6 +700,8 @@
 				FF1002602B26499B0011A4DC /* ConversationStatusView.swift in Sources */,
 				FF10024C2B25BEA00011A4DC /* MessageSD.swift in Sources */,
 				FFCF00F12C03209A00590E79 /* SpeechService.swift in Sources */,
+				FB6559DB2D9D23D2004D5399 /* LocalModelService.swift in Sources */,
+				FB6559DC2D9D23D2004D5399 /* LocalModelsView.swift in Sources */,
 				FF10023E2B24F4900011A4DC /* OllamaService.swift in Sources */,
 				FFBBF48C2B35051D008D611C /* UIImage+Extension.swift in Sources */,
 				FF1002302B2482BA0011A4DC /* ChatMessageView.swift in Sources */,
@@ -751,11 +765,13 @@
 				FF10026D2B2751760011A4DC /* SettingsView.swift in Sources */,
 				FF33066C2B83BB31007B33E5 /* SidebarButton.swift in Sources */,
 				FFD57E322BF291B2003FEFF1 /* CodeBlockView.swift in Sources */,
+				FB6559E22D9D2A50004D5399 /* TokenSanitizer.swift in Sources */,
 				FF1002542B261D460011A4DC /* MessageListVIew.swift in Sources */,
 				FF10024E2B25C2A70011A4DC /* ConversationSD.swift in Sources */,
 				FF9C920C2BF0C088004C8275 /* OptionsMenuView.swift in Sources */,
 				FF9C920A2BF0B7B1004C8275 /* LanguageModel.swift in Sources */,
 				FFEC32912B24779A003E5C04 /* EnchantedApp.swift in Sources */,
+				FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */,
 				FF2F03422B795E0B00349855 /* Clipboard.swift in Sources */,
 				3396E0762BD877D500213816 /* Menus.swift in Sources */,
 				FF9300DA2B781D97000859F4 /* ToolbarView_macOS.swift in Sources */,

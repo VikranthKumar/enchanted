@@ -254,15 +254,13 @@ class LocalModelService: @unchecked Sendable {
         let modelInfo = LocalModelService.availableModels.first { $0.name == modelName }
         
         switch modelInfo?.promptFormat {
-            case .llama2:
-                return .llama
             case .llama3:
                 return .llama3
             case .gemma:
                 return .gemma
             case .phi:
                 return .phi
-            case nil:
+            default:
                 // Default to llama2 format if unknown
                 return .llama
         }
@@ -370,7 +368,6 @@ class LocalModelService: @unchecked Sendable {
 
 // Add the phi prompt format
 enum ModelPromptFormat {
-    case llama2
     case llama3
     case gemma
     case phi
