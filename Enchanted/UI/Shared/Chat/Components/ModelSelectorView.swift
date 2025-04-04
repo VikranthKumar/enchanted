@@ -101,7 +101,7 @@ struct ModelSelectorView: View {
                     }
                 } label: {
                     HStack(alignment: .center) {
-                        if let selectedModel = selectedModel, selectedModel.modelProvider == .local {
+                        if let selectedModel = selectedModel, selectedModel.modelProvider == .local, !selectedLocalModel.isEmpty {
                             HStack(alignment: .bottom, spacing: 5) {
                                 
 #if os(macOS) || os(visionOS)
@@ -146,6 +146,7 @@ struct ModelSelectorView: View {
                             }
                         } else {
                             Text(selectedLocalModel.isEmpty ? "Select Local Model" : selectedLocalModel)
+                                .foregroundColor(Color.labelCustom)
                         }
                         
                         Image(systemName: "chevron.down")
