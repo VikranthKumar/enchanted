@@ -4,12 +4,11 @@
 //
 //  Created by Vikranth Kumar on 4/1/25.
 //
-
 import Foundation
 import Combine
 import OllamaKit
 import SwiftUI
-import SwiftLlama
+import llama
 
 @Observable
 class LocalModelService: @unchecked Sendable {
@@ -24,8 +23,7 @@ class LocalModelService: @unchecked Sendable {
     
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var progressObservers: [String: NSKeyValueObservation] = [:]
-    private var swiftLlamaInstances: [String: SwiftLlama] = [:]
-    
+    private var llamaInstances: [String: LLM] = [:]
     
     init() {
         // Create directory for storing models
@@ -191,7 +189,7 @@ class LocalModelService: @unchecked Sendable {
     func deleteModel(name: String) throws {
         let modelURL = modelDirectoryURL.appendingPathComponent("\(name).gguf")
         try FileManager.default.removeItem(at: modelURL)
-        swiftLlamaInstances[name] = nil
+        llamaInstances[name] = nil
         NotificationCenter.default.post(name: NSNotification.Name("ModelDeleted"), object: name)
     }
     
@@ -202,8 +200,8 @@ class LocalModelService: @unchecked Sendable {
     }
     
     // Initialize model if needed
-    private func getOrCreateLlamaInstance(for modelName: String) throws -> SwiftLlama {
-        if let instance = swiftLlamaInstances[modelName] {
+    private func getOrCreateLlamaInstance(for modelName: String) throws -> LLM {
+        if let instance = llamaInstances[modelName] {
             return instance
         }
         
@@ -214,59 +212,74 @@ class LocalModelService: @unchecked Sendable {
         }
         
         do {
-            let model = try SwiftLlama(modelPath: modelURL.path)
-            swiftLlamaInstances[modelName] = model
+            // Create template based on prompt format
+            let template = getTemplateForModel(modelName)
+            
+            // Initialize LLM with appropriate parameters
+            let model = LLM(
+                from: modelURL.path,
+                stopSequence: template.stopSequence,
+                history: [],
+                seed: UInt32.random(in: .min ... .max),
+                topK: 40,
+                topP: 0.95,
+                temp: 0.8,
+                maxTokenCount: 2048
+            )
+            
+            // Set the template
+            model.template = template
+            
+            // Store the instance for reuse
+            llamaInstances[modelName] = model
             return model
         } catch {
-            print("Failed to initialize SwiftLlama for model \(modelName): \(error)")
+            print("Failed to initialize LLM for model \(modelName): \(error)")
             throw LocalModelError.failedToLoadModel
         }
     }
     
-    // Convert OllamaKit messages to SwiftLlama Chat objects
-    private func convertToSwiftLlamaChats(from messages: [OKChatRequestData.Message]) -> [Chat] {
-        var chats: [Chat] = []
-        var currentUserMessage: String?
-        
-        // Group user-assistant pairs into Chat objects
-        for i in 0..<messages.count {
-            let message = messages[i]
-            
-            // Skip system messages
-            if message.role == .system {
-                continue
-            }
-            
-            if message.role == .user {
-                currentUserMessage = message.content
-            } else if message.role == .assistant, let userMsg = currentUserMessage {
-                // Create a chat pair
-                chats.append(Chat(user: userMsg, bot: message.content))
-                currentUserMessage = nil
-            }
-        }
-        
-        return chats
-    }
-    
-    // Get prompt type for a model
-    private func getPromptType(for modelName: String) -> Prompt.`Type` {
+    // Get template for a model based on its prompt format
+    private func getTemplateForModel(_ modelName: String) -> Template {
         let modelInfo = LocalModelService.availableModels.first { $0.name == modelName }
         
         switch modelInfo?.promptFormat {
             case .llama3:
-                return .llama3
+                return Template.chatML("You are a helpful assistant.")
             case .gemma:
-                return .gemma
+                return Template(
+                    user: ("<start_of_turn>user\n", "<end_of_turn>\n"),
+                    bot: ("<start_of_turn>model\n", "<end_of_turn>\n"),
+                    stopSequence: "<end_of_turn>",
+                    systemPrompt: "You are a helpful assistant."
+                )
             case .phi:
-                return .phi
+                return Template(
+                    user: ("<|user|>\n", "\n"),
+                    bot: ("<|assistant|>\n", "\n"),
+                    stopSequence: "<|end|>",
+                    systemPrompt: "You are a helpful assistant."
+                )
             default:
                 // Default to llama2 format if unknown
-                return .llama
+                return Template(
+                    user: ("USER: ", "\n"),
+                    bot: ("ASSISTANT: ", "\n\n"),
+                    stopSequence: "USER:",
+                    systemPrompt: "You are a helpful assistant."
+                )
         }
     }
     
-    // Generate a response from the model using SwiftLlama
+    // Convert OllamaKit messages to Chat objects
+    private func convertToChatObjects(from messages: [OKChatRequestData.Message]) -> [Chat] {
+        return messages.map { message in
+            let role: Role = message.role == .user ? .user : .bot
+            return Chat(role: role, content: message.content)
+        }
+    }
+    
+    // Generate a response from the model using llama.cpp
     func chat(data: OKChatRequestData) -> AnyPublisher<OKChatResponse, Error> {
         return Future<AnyPublisher<OKChatResponse, Error>, Error> { [weak self] promise in
             Task {
@@ -277,35 +290,76 @@ class LocalModelService: @unchecked Sendable {
                     
                     let llamaInstance = try self.getOrCreateLlamaInstance(for: data.model)
                     
-                    // Get system prompt if available
-                    let systemPrompt = data.messages.first(where: { $0.role == .system })?.content ?? ""
+                    // Extract system message if available
+                    if let systemMessage = data.messages.first(where: { $0.role == .system }) {
+                        if llamaInstance.template?.systemPrompt == nil {
+                            // Create a new template with the system prompt
+                            var template = llamaInstance.template
+                            template?.systemPrompt = systemMessage.content
+                            llamaInstance.template = template
+                        }
+                    }
+                    
+                    // Convert message history for context
+                    let history = self.convertToChatObjects(from: data.messages)
+                    llamaInstance.history = history
                     
                     // Get the latest user message
-                    guard let userMessage = data.messages.last(where: { $0.role == .user })?.content else {
+                    guard let lastUserMessage = data.messages.last(where: { $0.role == .user })?.content else {
                         throw LocalModelError.inferenceError("No user message found")
                     }
                     
-                    // Convert previous messages to Chat objects for history
-                    // Only include full user-assistant pairs, not the latest user message
-                    let messagesToConvert = data.messages.prefix(while: { $0.content != userMessage || $0.role != .user })
-                    let history = self.convertToSwiftLlamaChats(from: Array(messagesToConvert))
+                    // Set up a publisher to stream tokens
+                    let subject = PassthroughSubject<OKChatResponse, Error>()
+                    let publisher = subject.eraseToAnyPublisher()
                     
-                    // Get the prompt type for this model
-                    let promptType = self.getPromptType(for: data.model)
-                    
-                    // Create a properly formatted Prompt object
-                    let prompt = Prompt(
-                        type: promptType,
-                        systemPrompt: systemPrompt,
-                        userMessage: userMessage,
-                        history: history
-                    )
-                    
-                    // Use SwiftLlama's publisher for streaming
-                    let modelName = data.model
-                    let publisher = try await llamaInstance.start(for: prompt)
-                        .map { self.tokenToResponse(token: $0, model: modelName) }
-                        .eraseToAnyPublisher()
+                    // Start inference
+                    Task {
+                        // Set up response handling
+                        llamaInstance.update = { delta in
+                            if let delta = delta {
+                                // Create OKChatResponse from delta
+                                let responseDict: [String: Any] = [
+                                    "model": data.model,
+                                    "message": [
+                                        "role": "assistant",
+                                        "content": TokenSanitizer.sanitize(token: delta)
+                                    ],
+                                    "done": false
+                                ]
+                                
+                                do {
+                                    let jsonData = try JSONSerialization.data(withJSONObject: responseDict)
+                                    let response = try JSONDecoder().decode(OKChatResponse.self, from: jsonData)
+                                    subject.send(response)
+                                } catch {
+                                    subject.send(completion: .failure(error))
+                                }
+                            } else {
+                                // Completion
+                                let responseDict: [String: Any] = [
+                                    "model": data.model,
+                                    "message": [
+                                        "role": "assistant",
+                                        "content": ""
+                                    ],
+                                    "done": true
+                                ]
+                                
+                                do {
+                                    let jsonData = try JSONSerialization.data(withJSONObject: responseDict)
+                                    let response = try JSONDecoder().decode(OKChatResponse.self, from: jsonData)
+                                    subject.send(response)
+                                    subject.send(completion: .finished)
+                                } catch {
+                                    subject.send(completion: .failure(error))
+                                }
+                            }
+                        }
+                        
+                        // Begin inference
+                        await llamaInstance.respond(to: lastUserMessage)
+                    }
                     
                     promise(.success(publisher))
                 } catch {
@@ -315,49 +369,6 @@ class LocalModelService: @unchecked Sendable {
         }
         .switchToLatest()
         .eraseToAnyPublisher()
-    }
-    
-    func tokenToResponse(token: String, model: String) -> OKChatResponse {
-        let processedToken = TokenSanitizer.sanitize(token: token)
-        
-        // Use JSONSerialization to create the response
-        let responseDict: [String: Any] = [
-            "model": model,
-            "message": [
-                "role": "assistant",
-                "content": processedToken
-            ],
-            "done": false
-        ]
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: responseDict)
-            let response = try JSONDecoder().decode(OKChatResponse.self, from: jsonData)
-            return response
-        } catch {
-            // If decoding fails, create a fallback response
-            print("Error creating OKChatResponse: \(error)")
-            
-            // Return an empty response that matches the structure but won't crash
-            // This is a last resort fallback
-            let emptyResponseDict: [String: Any] = [
-                "model": model,
-                "created_at": Date().timeIntervalSince1970,
-                "message": [
-                    "role": "assistant",
-                    "content": "Error: \(error.localizedDescription)"
-                ],
-                "done": false
-            ]
-            
-            do {
-                let jsonData = try JSONSerialization.data(withJSONObject: emptyResponseDict)
-                return try JSONDecoder().decode(OKChatResponse.self, from: jsonData)
-            } catch {
-                // If even this fails, we have a serious issue
-                fatalError("Could not create OKChatResponse: \(error)")
-            }
-        }
     }
     
     // Check if server is reachable (always returns true for local inference)
@@ -411,11 +422,11 @@ enum LocalModelError: Error, LocalizedError {
             case .modelNotFound:
                 return "The model file was not found in the local storage directory"
             case .modelNotInitialized:
-                return "The model could not be initialized by SwiftLlama"
+                return "The model could not be initialized"
             case .failedToLoadModel:
                 return "There was an error loading the model"
             case .incompatibleModel:
-                return "This model format is not supported by the current version of SwiftLlama"
+                return "This model format is not supported"
             case .inferenceError(let details):
                 return details
         }
@@ -434,5 +445,67 @@ enum LocalModelError: Error, LocalizedError {
             case .inferenceError:
                 return "Try a different prompt or restart the app"
         }
+    }
+}
+
+// Utility extension to convert ContiguousArray of CChar to UTF8CString
+extension String {
+    var utf8CString: ContiguousArray<CChar> {
+        // Create a new ContiguousArray from the string's UTF8 bytes
+        let utf8 = self.utf8
+        var result = ContiguousArray<CChar>()
+        
+        // Reserve capacity to avoid reallocations
+        result.reserveCapacity(utf8.count)
+        
+        // Safely convert UInt8 to CChar
+        for byte in utf8 {
+            result.append(CChar(bitPattern: byte))
+        }
+        
+        // Ensure null-termination is not included
+        if !result.isEmpty && result.last == 0 {
+            result.removeLast()
+        }
+        
+        return result
+    }}
+
+// Helper extension for models
+extension Model {
+    var endToken: Token {
+        llama_token_eos(self)
+    }
+}
+
+// Helper struct for tracking inference metrics
+struct InferenceMetrics {
+    var inputTokenCount: Int32 = 0
+    var outputTokenCount: Int32 = 0
+    var startTime: Date?
+    var endTime: Date?
+    
+    mutating func start() {
+        startTime = Date()
+        outputTokenCount = 0
+    }
+    
+    mutating func stop() {
+        endTime = Date()
+    }
+    
+    mutating func recordToken() {
+        outputTokenCount += 1
+    }
+    
+    var elapsedTime: TimeInterval? {
+        guard let start = startTime else { return nil }
+        let end = endTime ?? Date()
+        return end.timeIntervalSince(start)
+    }
+    
+    var tokensPerSecond: Double? {
+        guard let elapsed = elapsedTime, elapsed > 0 else { return nil }
+        return Double(outputTokenCount) / elapsed
     }
 }

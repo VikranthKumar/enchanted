@@ -9,7 +9,6 @@ import Combine
 
 /// A class to process and filter tokens from local inference models
 class TokenSanitizer {
-    
     static let specialTokensToFilter = [
         // Basic markers
         "<s>", "</s>", "<pad>", "<eos>", "<bos>",
@@ -27,12 +26,11 @@ class TokenSanitizer {
         "<s>", "</s>", "<unk>"
     ]
     
-    /// Sanitizes raw tokens from llama.cpp before processing
+    /// Sanitizes raw tokens before processing
     /// - Parameter token: The raw token string from llama.cpp
     /// - Returns: A cleaned token string ready for use
     static func sanitize(token: String) -> String {
         var sanitizedToken = token
-        
         
         // 1. Handle special tokens that might come from the model
         if TokenSanitizer.specialTokensToFilter.contains(token) {
@@ -42,7 +40,7 @@ class TokenSanitizer {
         // 2. Remove any BOS (Beginning of Sequence) or EOS (End of Sequence) tokens
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "^<s>|</s>$", with: "", options: .regularExpression)
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "<\\|[^\\|]+\\|>", with: "", options: .regularExpression)
-
+        
         // 3. Handle potential control characters
         sanitizedToken = sanitizedToken.filter { char in
             // Allow only printable characters, newlines, and tabs
@@ -57,7 +55,7 @@ class TokenSanitizer {
             sanitizedToken = validUTF8String
         }
         
-        // 5. IMPORTANT: Remove the diamond (◆) character specifically
+        // 5. Remove the diamond (◆) character specifically
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "◆", with: "")
         
         return sanitizedToken

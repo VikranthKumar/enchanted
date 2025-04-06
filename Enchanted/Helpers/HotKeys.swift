@@ -28,26 +28,26 @@ public struct HotKeysMod: ViewModifier {
     
     public func body(content: Content) -> some View {
         ZStack {
-            DisableSoundsView(hotkeys:hotkeys)
-                .frame(width: 1, height: 1)
+//            DisableSoundsView(hotkeys:hotkeys)
+//                .frame(width: 1, height: 1)
             content
         }
     }
 }
 
-struct DisableSoundsView: NSViewRepresentable {
-    var hotkeys: [HotkeyCombination]
-    
-    func makeNSView(context: Context) -> NSView {
-        let view = DisableSoundsNSView()
-        
-        view.hotkeys = hotkeys
-        
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSView, context: Context) { }
-}
+//struct DisableSoundsView: NSViewRepresentable {
+//    var hotkeys: [HotkeyCombination]
+//    
+//    func makeNSView(context: Context) -> NSView {
+//        let view = DisableSoundsNSView()
+//        
+//        view.hotkeys = hotkeys
+//        
+//        return view
+//    }
+//    
+//    func updateNSView(_ nsView: NSView, context: Context) { }
+//}
 
 class DisableSoundsNSView: NSView {
     var hotkeys: [HotkeyCombination] = []

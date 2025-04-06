@@ -7,9 +7,8 @@
 
 import Foundation
 
+// Predefined models
 extension LocalModelService {
-    
-    // Predefined models
     static let availableModels = [
         ModelDownloadInfo(
             name: "llama-3-1b-instruct",
@@ -26,5 +25,4 @@ extension LocalModelService {
             promptFormat: .phi
         )
     ]
-    
 }

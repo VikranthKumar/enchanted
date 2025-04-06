@@ -8,11 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		3396E0762BD877D500213816 /* Menus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3396E0752BD877D500213816 /* Menus.swift */; };
+		FB1383752DA1F8680008BC74 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = FB1383742DA1F8680008BC74 /* llama */; };
+		FB1383882DA1F8BB0008BC74 /* Template.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383822DA1F8BB0008BC74 /* Template.swift */; };
+		FB13838C2DA1F8BB0008BC74 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB13837E2DA1F8BB0008BC74 /* LLM.swift */; };
+		FB13839C2DA1F8D20008BC74 /* Llama.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383942DA1F8D20008BC74 /* Llama.swift */; };
 		FB6559DB2D9D23D2004D5399 /* LocalModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D72D9D23D2004D5399 /* LocalModelService.swift */; };
 		FB6559DC2D9D23D2004D5399 /* LocalModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */; };
 		FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */; };
 		FB6559E22D9D2A50004D5399 /* TokenSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */; };
-		FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BD92D9BDE6A0018FA8B /* SwiftLlama */; };
 		FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB801BE92D9C80AD0018FA8B /* OllamaKit */; };
 		FB801BF62D9CE90E0018FA8B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB801BF52D9CE90E0018FA8B /* Accelerate.framework */; };
 		FF0146CB2B3DA1DF00A2A9F6 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0146CA2B3DA1DF00A2A9F6 /* Settings.swift */; };
@@ -113,6 +116,9 @@
 
 /* Begin PBXFileReference section */
 		3396E0752BD877D500213816 /* Menus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Menus.swift; sourceTree = "<group>"; };
+		FB13837E2DA1F8BB0008BC74 /* LLM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLM.swift; sourceTree = "<group>"; };
+		FB1383822DA1F8BB0008BC74 /* Template.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Template.swift; sourceTree = "<group>"; };
+		FB1383942DA1F8D20008BC74 /* Llama.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Llama.swift; sourceTree = "<group>"; };
 		FB6559D72D9D23D2004D5399 /* LocalModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelService.swift; sourceTree = "<group>"; };
 		FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelsView.swift; sourceTree = "<group>"; };
 		FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailableModels.swift; sourceTree = "<group>"; };
@@ -215,6 +221,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FB1383752DA1F8680008BC74 /* llama in Frameworks */,
 				FFD5FAD22B8130490055AB51 /* Vortex in Frameworks */,
 				FF0611F12C04A2FB00443B33 /* Splash in Frameworks */,
 				FF79AEB62CE72ECE00EDE10C /* MarkdownUI in Frameworks */,
@@ -224,7 +231,6 @@
 				FB801BEA2D9C80AD0018FA8B /* OllamaKit in Frameworks */,
 				FF1002662B2653EE0011A4DC /* ActivityIndicatorView in Frameworks */,
 				FFFD00C92B94CB5E00392AE6 /* AsyncAlgorithms in Frameworks */,
-				FB801BDA2D9BDE6A0018FA8B /* SwiftLlama in Frameworks */,
 				FF4A605D2BC3587800D7BD4F /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -232,6 +238,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		FB1383762DA1F8850008BC74 /* Local Inference */ = {
+			isa = PBXGroup;
+			children = (
+				FB13837E2DA1F8BB0008BC74 /* LLM.swift */,
+				FB1383822DA1F8BB0008BC74 /* Template.swift */,
+				FB1383942DA1F8D20008BC74 /* Llama.swift */,
+			);
+			path = "Local Inference";
+			sourceTree = "<group>";
+		};
 		FB6559E42D9D43F2004D5399 /* LocalModels */ = {
 			isa = PBXGroup;
 			children = (
@@ -484,6 +500,7 @@
 		FFEC328F2B24779A003E5C04 /* Enchanted */ = {
 			isa = PBXGroup;
 			children = (
+				FB1383762DA1F8850008BC74 /* Local Inference */,
 				FF9C92072BF0B464004C8275 /* EnchantedDebug.entitlements */,
 				FFEC32982B24779B003E5C04 /* Enchanted.entitlements */,
 				FFE2C8222B9A657A00BD82F3 /* Accessibility.plist */,
@@ -623,8 +640,8 @@
 				FF0611E92C04A11800443B33 /* Magnet */,
 				FF0611F02C04A2FB00443B33 /* Splash */,
 				FF79AEB52CE72ECE00EDE10C /* MarkdownUI */,
-				FB801BD92D9BDE6A0018FA8B /* SwiftLlama */,
 				FB801BE92D9C80AD0018FA8B /* OllamaKit */,
+				FB1383742DA1F8680008BC74 /* llama */,
 			);
 			productName = Enchanted;
 			productReference = FFEC328D2B24779A003E5C04 /* Enchanted.app */;
@@ -663,8 +680,8 @@
 				FF0611E82C04A11800443B33 /* XCRemoteSwiftPackageReference "Magnet" */,
 				FF0611EF2C04A2FB00443B33 /* XCRemoteSwiftPackageReference "Splash" */,
 				FF79AEB42CE72ECE00EDE10C /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
-				FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */,
 				FB801BE82D9C80AD0018FA8B /* XCRemoteSwiftPackageReference "OllamaKit" */,
+				FB1383732DA1F8670008BC74 /* XCRemoteSwiftPackageReference "llama" */,
 			);
 			productRefGroup = FFEC328E2B24779A003E5C04 /* Products */;
 			projectDirPath = "";
@@ -768,11 +785,14 @@
 				FB6559E22D9D2A50004D5399 /* TokenSanitizer.swift in Sources */,
 				FF1002542B261D460011A4DC /* MessageListVIew.swift in Sources */,
 				FF10024E2B25C2A70011A4DC /* ConversationSD.swift in Sources */,
+				FB13839C2DA1F8D20008BC74 /* Llama.swift in Sources */,
 				FF9C920C2BF0C088004C8275 /* OptionsMenuView.swift in Sources */,
 				FF9C920A2BF0B7B1004C8275 /* LanguageModel.swift in Sources */,
 				FFEC32912B24779A003E5C04 /* EnchantedApp.swift in Sources */,
 				FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */,
 				FF2F03422B795E0B00349855 /* Clipboard.swift in Sources */,
+				FB1383882DA1F8BB0008BC74 /* Template.swift in Sources */,
+				FB13838C2DA1F8BB0008BC74 /* LLM.swift in Sources */,
 				3396E0762BD877D500213816 /* Menus.swift in Sources */,
 				FF9300DA2B781D97000859F4 /* ToolbarView_macOS.swift in Sources */,
 				FF1002522B2609980011A4DC /* ModelContext+Extension.swift in Sources */,
@@ -1032,12 +1052,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */ = {
+		FB1383732DA1F8670008BC74 /* XCRemoteSwiftPackageReference "llama" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/VikranthKumar/SwiftLlama";
+			repositoryURL = "https://github.com/ggerganov/llama.cpp/";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = revision;
+				revision = cc98896db858df7aa40d0e16a505883ef196a482;
 			};
 		};
 		FB801BE82D9C80AD0018FA8B /* XCRemoteSwiftPackageReference "OllamaKit" */ = {
@@ -1115,10 +1135,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		FB801BD92D9BDE6A0018FA8B /* SwiftLlama */ = {
+		FB1383742DA1F8680008BC74 /* llama */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = FB801BD82D9BDE6A0018FA8B /* XCRemoteSwiftPackageReference "SwiftLlama" */;
-			productName = SwiftLlama;
+			package = FB1383732DA1F8670008BC74 /* XCRemoteSwiftPackageReference "llama" */;
+			productName = llama;
 		};
 		FB801BE92D9C80AD0018FA8B /* OllamaKit */ = {
 			isa = XCSwiftPackageProductDependency;
