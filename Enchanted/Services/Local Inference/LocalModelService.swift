@@ -4,6 +4,7 @@
 //
 //  Created by Vikranth Kumar on 4/1/25.
 //
+
 import Foundation
 import Combine
 import OllamaKit
@@ -187,16 +188,72 @@ class LocalModelService: @unchecked Sendable {
     
     // Delete model
     func deleteModel(name: String) throws {
+//        try deleteAllModels()
         let modelURL = modelDirectoryURL.appendingPathComponent("\(name).gguf")
         try FileManager.default.removeItem(at: modelURL)
         llamaInstances[name] = nil
         NotificationCenter.default.post(name: NSNotification.Name("ModelDeleted"), object: name)
     }
     
+//    func deleteAllModels() throws {
+//        let fileManager = FileManager.default
+//        let fileURLs = try fileManager.contentsOfDirectory(at: modelDirectoryURL, includingPropertiesForKeys: nil)
+//        
+//        for fileURL in fileURLs {
+//            try fileManager.removeItem(at: fileURL)
+//            
+//            // If your models are named like "modelname.gguf", remove them from llamaInstances
+//            let fileName = fileURL.deletingPathExtension().lastPathComponent
+//            llamaInstances[fileName] = nil
+//            NotificationCenter.default.post(name: NSNotification.Name("ModelDeleted"), object: fileName)
+//        }
+//    }
+    
     // Check if model exists
     func modelExists(name: String) -> Bool {
         let modelURL = modelDirectoryURL.appendingPathComponent("\(name).gguf")
         return FileManager.default.fileExists(atPath: modelURL.path)
+    }
+    
+    // Safe model loading with error handling
+    func loadModelWithErrorHandling(path: String) throws -> Model {
+        // Check if file exists
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: path) else {
+            throw LocalModelError.modelNotFound
+        }
+        
+        // Check file size
+        let fileAttributes = try fileManager.attributesOfItem(atPath: path)
+        guard let fileSize = fileAttributes[.size] as? UInt64, fileSize > 0 else {
+            throw LocalModelError.failedToLoadModel
+        }
+        
+        // Convert path to C string
+        let pathCString = path.cString(using: .utf8)!
+        
+        // Set up model parameters
+        var modelParams = llama_model_default_params()
+#if targetEnvironment(simulator)
+        modelParams.n_gpu_layers = 0
+#endif
+        
+        // Attempt to load the model
+        guard let model = llama_load_model_from_file(pathCString, modelParams) else {
+            // Provide specific error messages based on file inspection
+            if fileSize < 1024 * 1024 { // Less than 1MB
+                throw LocalModelError.failedToLoadModel
+            }
+            
+            // Check file extension
+            if !path.lowercased().hasSuffix(".gguf") {
+                throw LocalModelError.incompatibleModel
+            }
+            
+            throw LocalModelError.failedToLoadModel
+        }
+        
+        return model
     }
     
     // Initialize model if needed
@@ -212,6 +269,9 @@ class LocalModelService: @unchecked Sendable {
         }
         
         do {
+            // First try to load the model to check if it works
+            _ = try loadModelWithErrorHandling(path: modelURL.path)
+            
             // Create template based on prompt format
             let template = getTemplateForModel(modelName)
             
@@ -239,35 +299,39 @@ class LocalModelService: @unchecked Sendable {
         }
     }
     
-    // Get template for a model based on its prompt format
+    // Get template for a model based on its name
     private func getTemplateForModel(_ modelName: String) -> Template {
         let modelInfo = LocalModelService.availableModels.first { $0.name == modelName }
+        let modelNameLower = modelName.lowercased()
         
-        switch modelInfo?.promptFormat {
-            case .llama3:
-                return Template.chatML("You are a helpful assistant.")
-            case .gemma:
-                return Template(
-                    user: ("<start_of_turn>user\n", "<end_of_turn>\n"),
-                    bot: ("<start_of_turn>model\n", "<end_of_turn>\n"),
-                    stopSequence: "<end_of_turn>",
-                    systemPrompt: "You are a helpful assistant."
-                )
-            case .phi:
-                return Template(
-                    user: ("<|user|>\n", "\n"),
-                    bot: ("<|assistant|>\n", "\n"),
-                    stopSequence: "<|end|>",
-                    systemPrompt: "You are a helpful assistant."
-                )
-            default:
-                // Default to llama2 format if unknown
-                return Template(
-                    user: ("USER: ", "\n"),
-                    bot: ("ASSISTANT: ", "\n\n"),
-                    stopSequence: "USER:",
-                    systemPrompt: "You are a helpful assistant."
-                )
+        // Detect model type based on name pattern
+        if modelNameLower.contains("llama-3") || modelNameLower.contains("llama3") {
+            return Template.chatML("You are a helpful assistant.")
+        } else if modelNameLower.contains("gemma") {
+            // Gemma 2 template
+            return Template(
+                user: ("<start_of_turn>user\n", "<end_of_turn>\n"),
+                bot: ("<start_of_turn>model\n", "<end_of_turn>\n"),
+                stopSequence: "<end_of_turn>",
+                systemPrompt: "You are a helpful assistant."
+            )
+        } else if modelNameLower.contains("phi") {
+            return Template(
+                user: ("<|user|>\n", "\n"),
+                bot: ("<|assistant|>\n", "\n"),
+                stopSequence: "<|end|>",
+                systemPrompt: "You are a helpful assistant."
+            )
+        } else if modelNameLower.contains("mistral") {
+            return Template.mistral
+        } else {
+            // Default to a simple template that should work with most models
+            return Template(
+                user: ("USER: ", "\n"),
+                bot: ("ASSISTANT: ", "\n\n"),
+                stopSequence: "USER:",
+                systemPrompt: "You are a helpful assistant."
+            )
         }
     }
     
@@ -377,11 +441,12 @@ class LocalModelService: @unchecked Sendable {
     }
 }
 
-// Add the phi prompt format
-enum ModelPromptFormat {
+// Model formats
+enum ModelPromptFormat: String {
     case llama3
     case gemma
     case phi
+    case mistral
 }
 
 // Model download information
@@ -415,97 +480,5 @@ enum LocalModelError: Error, LocalizedError {
             case .inferenceError(let details):
                 return "Inference error: \(details)"
         }
-    }
-    
-    var failureReason: String? {
-        switch self {
-            case .modelNotFound:
-                return "The model file was not found in the local storage directory"
-            case .modelNotInitialized:
-                return "The model could not be initialized"
-            case .failedToLoadModel:
-                return "There was an error loading the model"
-            case .incompatibleModel:
-                return "This model format is not supported"
-            case .inferenceError(let details):
-                return details
-        }
-    }
-    
-    var recoverySuggestion: String? {
-        switch self {
-            case .modelNotFound:
-                return "Try downloading the model again"
-            case .modelNotInitialized:
-                return "Restart the app and try again"
-            case .failedToLoadModel:
-                return "Try downloading a different model or check your device's available memory"
-            case .incompatibleModel:
-                return "Try a different model or update the app"
-            case .inferenceError:
-                return "Try a different prompt or restart the app"
-        }
-    }
-}
-
-// Utility extension to convert ContiguousArray of CChar to UTF8CString
-extension String {
-    var utf8CString: ContiguousArray<CChar> {
-        // Create a new ContiguousArray from the string's UTF8 bytes
-        let utf8 = self.utf8
-        var result = ContiguousArray<CChar>()
-        
-        // Reserve capacity to avoid reallocations
-        result.reserveCapacity(utf8.count)
-        
-        // Safely convert UInt8 to CChar
-        for byte in utf8 {
-            result.append(CChar(bitPattern: byte))
-        }
-        
-        // Ensure null-termination is not included
-        if !result.isEmpty && result.last == 0 {
-            result.removeLast()
-        }
-        
-        return result
-    }}
-
-// Helper extension for models
-extension Model {
-    var endToken: Token {
-        llama_token_eos(self)
-    }
-}
-
-// Helper struct for tracking inference metrics
-struct InferenceMetrics {
-    var inputTokenCount: Int32 = 0
-    var outputTokenCount: Int32 = 0
-    var startTime: Date?
-    var endTime: Date?
-    
-    mutating func start() {
-        startTime = Date()
-        outputTokenCount = 0
-    }
-    
-    mutating func stop() {
-        endTime = Date()
-    }
-    
-    mutating func recordToken() {
-        outputTokenCount += 1
-    }
-    
-    var elapsedTime: TimeInterval? {
-        guard let start = startTime else { return nil }
-        let end = endTime ?? Date()
-        return end.timeIntervalSince(start)
-    }
-    
-    var tokensPerSecond: Double? {
-        guard let elapsed = elapsedTime, elapsed > 0 else { return nil }
-        return Double(outputTokenCount) / elapsed
     }
 }

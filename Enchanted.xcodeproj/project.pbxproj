@@ -9,9 +9,9 @@
 /* Begin PBXBuildFile section */
 		3396E0762BD877D500213816 /* Menus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3396E0752BD877D500213816 /* Menus.swift */; };
 		FB1383752DA1F8680008BC74 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = FB1383742DA1F8680008BC74 /* llama */; };
-		FB1383882DA1F8BB0008BC74 /* Template.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383822DA1F8BB0008BC74 /* Template.swift */; };
-		FB13838C2DA1F8BB0008BC74 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB13837E2DA1F8BB0008BC74 /* LLM.swift */; };
-		FB13839C2DA1F8D20008BC74 /* Llama.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383942DA1F8D20008BC74 /* Llama.swift */; };
+		FB1383A02DA212D80008BC74 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB13839F2DA212D50008BC74 /* LLM.swift */; };
+		FB1383A22DA212E10008BC74 /* Template.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383A12DA212DD0008BC74 /* Template.swift */; };
+		FB1383A42DA212E80008BC74 /* Llama.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1383A32DA212E50008BC74 /* Llama.swift */; };
 		FB6559DB2D9D23D2004D5399 /* LocalModelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D72D9D23D2004D5399 /* LocalModelService.swift */; };
 		FB6559DC2D9D23D2004D5399 /* LocalModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */; };
 		FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */; };
@@ -116,9 +116,9 @@
 
 /* Begin PBXFileReference section */
 		3396E0752BD877D500213816 /* Menus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Menus.swift; sourceTree = "<group>"; };
-		FB13837E2DA1F8BB0008BC74 /* LLM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLM.swift; sourceTree = "<group>"; };
-		FB1383822DA1F8BB0008BC74 /* Template.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Template.swift; sourceTree = "<group>"; };
-		FB1383942DA1F8D20008BC74 /* Llama.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Llama.swift; sourceTree = "<group>"; };
+		FB13839F2DA212D50008BC74 /* LLM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLM.swift; sourceTree = "<group>"; };
+		FB1383A12DA212DD0008BC74 /* Template.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Template.swift; sourceTree = "<group>"; };
+		FB1383A32DA212E50008BC74 /* Llama.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Llama.swift; sourceTree = "<group>"; };
 		FB6559D72D9D23D2004D5399 /* LocalModelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelService.swift; sourceTree = "<group>"; };
 		FB6559D82D9D23D2004D5399 /* LocalModelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelsView.swift; sourceTree = "<group>"; };
 		FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailableModels.swift; sourceTree = "<group>"; };
@@ -238,12 +238,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		FB1383762DA1F8850008BC74 /* Local Inference */ = {
+		FB13839E2DA211B50008BC74 /* Local Inference */ = {
 			isa = PBXGroup;
 			children = (
-				FB13837E2DA1F8BB0008BC74 /* LLM.swift */,
-				FB1383822DA1F8BB0008BC74 /* Template.swift */,
-				FB1383942DA1F8D20008BC74 /* Llama.swift */,
+				FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */,
+				FB13839F2DA212D50008BC74 /* LLM.swift */,
+				FB1383A12DA212DD0008BC74 /* Template.swift */,
+				FB1383A32DA212E50008BC74 /* Llama.swift */,
+				FB6559D72D9D23D2004D5399 /* LocalModelService.swift */,
+				FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */,
 			);
 			path = "Local Inference";
 			sourceTree = "<group>";
@@ -386,7 +389,6 @@
 				FFE21C772B82353A00A69B9C /* SleepTest.swift */,
 				FF6D82142B911536001183A8 /* Accessibility.swift */,
 				FF6D82242B9204F3001183A8 /* AsyncQueue.swift */,
-				FB6559E02D9D2A4E004D5399 /* TokenSanitizer.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -500,7 +502,6 @@
 		FFEC328F2B24779A003E5C04 /* Enchanted */ = {
 			isa = PBXGroup;
 			children = (
-				FB1383762DA1F8850008BC74 /* Local Inference */,
 				FF9C92072BF0B464004C8275 /* EnchantedDebug.entitlements */,
 				FFEC32982B24779B003E5C04 /* Enchanted.entitlements */,
 				FFE2C8222B9A657A00BD82F3 /* Accessibility.plist */,
@@ -568,6 +569,7 @@
 		FFEC32A42B247874003E5C04 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				FB13839E2DA211B50008BC74 /* Local Inference */,
 				FF2F03412B795E0B00349855 /* Clipboard.swift */,
 				FF0146CC2B3DADCA00A2A9F6 /* HapticsService.swift */,
 				FF2F03482B796A6500349855 /* HotkeyService.swift */,
@@ -575,8 +577,6 @@
 				FF10024F2B25C79F0011A4DC /* SwiftDataService.swift */,
 				FF6B7B122B3EE7AC00E8FEA3 /* Throttler.swift */,
 				FFCF00F02C03209A00590E79 /* SpeechService.swift */,
-				FB6559D72D9D23D2004D5399 /* LocalModelService.swift */,
-				FB6559DD2D9D29DC004D5399 /* AvailableModels.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -717,6 +717,7 @@
 				FF1002602B26499B0011A4DC /* ConversationStatusView.swift in Sources */,
 				FF10024C2B25BEA00011A4DC /* MessageSD.swift in Sources */,
 				FFCF00F12C03209A00590E79 /* SpeechService.swift in Sources */,
+				FB1383A42DA212E80008BC74 /* Llama.swift in Sources */,
 				FB6559DB2D9D23D2004D5399 /* LocalModelService.swift in Sources */,
 				FB6559DC2D9D23D2004D5399 /* LocalModelsView.swift in Sources */,
 				FF10023E2B24F4900011A4DC /* OllamaService.swift in Sources */,
@@ -776,6 +777,7 @@
 				FF1002502B25C79F0011A4DC /* SwiftDataService.swift in Sources */,
 				FF7FBE4C2B78E384000901F7 /* SamplePrompt.swift in Sources */,
 				FF38F8582B7AB1AD00546B56 /* PanelManager.swift in Sources */,
+				FB1383A22DA212E10008BC74 /* Template.swift in Sources */,
 				FF6D82172B9122F9001183A8 /* CompletionInstructionSD.swift in Sources */,
 				FF226A652BE2A0EC00CC91F1 /* SelectTextSheet.swift in Sources */,
 				FF10025A2B2624C40011A4DC /* ConversationHistoryListView.swift in Sources */,
@@ -785,16 +787,14 @@
 				FB6559E22D9D2A50004D5399 /* TokenSanitizer.swift in Sources */,
 				FF1002542B261D460011A4DC /* MessageListVIew.swift in Sources */,
 				FF10024E2B25C2A70011A4DC /* ConversationSD.swift in Sources */,
-				FB13839C2DA1F8D20008BC74 /* Llama.swift in Sources */,
 				FF9C920C2BF0C088004C8275 /* OptionsMenuView.swift in Sources */,
 				FF9C920A2BF0B7B1004C8275 /* LanguageModel.swift in Sources */,
 				FFEC32912B24779A003E5C04 /* EnchantedApp.swift in Sources */,
 				FB6559DF2D9D29E6004D5399 /* AvailableModels.swift in Sources */,
 				FF2F03422B795E0B00349855 /* Clipboard.swift in Sources */,
-				FB1383882DA1F8BB0008BC74 /* Template.swift in Sources */,
-				FB13838C2DA1F8BB0008BC74 /* LLM.swift in Sources */,
 				3396E0762BD877D500213816 /* Menus.swift in Sources */,
 				FF9300DA2B781D97000859F4 /* ToolbarView_macOS.swift in Sources */,
+				FB1383A02DA212D80008BC74 /* LLM.swift in Sources */,
 				FF1002522B2609980011A4DC /* ModelContext+Extension.swift in Sources */,
 				FF1002752B278C170011A4DC /* AppStore.swift in Sources */,
 				FF1002732B276EC10011A4DC /* AppColorScheme.swift in Sources */,

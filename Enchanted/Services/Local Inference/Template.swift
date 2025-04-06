@@ -1,4 +1,9 @@
-// Template.swift
+//
+//  Template.swift
+//  Enchanted
+//
+//  Created by Vikranth Kumar on 4/5/25.
+//
 
 import Foundation
 import llama
@@ -7,72 +12,56 @@ import llama
 public struct Template {
     /// Represents prefix and suffix text to wrap around different message types
     public typealias Attachment = (prefix: String, suffix: String)
-
+    
     /// Formatting for system messages
     public let system: Attachment
-
+    
     /// Formatting for user messages
     public let user: Attachment
-
+    
     /// Formatting for bot/assistant messages
     public let bot: Attachment
-
+    
     /// Optional system prompt to set context for the conversation
     public var systemPrompt: String?
-
+    
     /// Sequence that indicates the end of the model's response
     public let stopSequence: String?
-
+    
     /// Text to prepend to the entire conversation
     public let prefix: String
-
+    
     /// Whether to drop the last character of the bot prefix
     public let shouldDropLast: Bool
-
+    
     /// Creates a new template for formatting conversation messages
-    /// - Parameters:
-    ///   - prefix: Text to prepend to the entire conversation
-    ///   - system: Formatting for system messages
-    ///   - user: Formatting for user messages
-    ///   - bot: Formatting for bot/assistant messages
-    ///   - stopSequence: Sequence indicating end of response
-    ///   - systemPrompt: Initial system message for context
-    ///   - shouldDropLast: Whether to drop last character of bot prefix
     public init(
         prefix: String = "",
         system: Attachment? = nil,
         user: Attachment? = nil,
         bot: Attachment? = nil,
         stopSequence: String? = nil,
-        systemPrompt: String?,
+        systemPrompt: String? = nil,
         shouldDropLast: Bool = false
     ) {
         self.system = system ?? ("", "")
-        self.user = user  ?? ("", "")
+        self.user = user ?? ("", "")
         self.bot = bot ?? ("", "")
         self.stopSequence = stopSequence
         self.systemPrompt = systemPrompt
         self.prefix = prefix
         self.shouldDropLast = shouldDropLast
     }
-
-    /// Closure that formats input and history into model-ready prompt
-    /// - Parameters:
-    ///   - input: Current user input to process
-    ///   - history: Previous conversation messages
-    ///   - llmInstance: Reference to LLM instance for state checking
-    /// - Returns: Formatted string ready for model inference
-    /// - Note: Handles both new conversations and continued chats with saved state
+    
+    /// Formats input and history into model-ready prompt
     public var preprocess: (_ input: String, _ history: [Chat], _ llmInstance: LLM) -> String {
         return { [self] input, history, llmInstance in
             // If the state is restored, only preprocess the new input
             if llmInstance.savedState != nil {
-
                 // Return only the new user input formatted
                 var processed = prefix
                 processed += "\(user.prefix)\(input)\(user.suffix)"
                 processed += bot.prefix
-
                 return processed
             } else {
                 // Full preprocessing for the first input or reset state
@@ -99,10 +88,8 @@ public struct Template {
             }
         }
     }
-
+    
     /// Creates a template for ChatML format
-    /// - Parameter systemPrompt: Optional system message for context
-    /// - Returns: Template configured for ChatML format
     public static func chatML(_ systemPrompt: String? = nil) -> Template {
         return Template(
             system: ("<|im_start|>system\n", "<|im_end|>\n"),
@@ -112,23 +99,8 @@ public struct Template {
             systemPrompt: systemPrompt
         )
     }
-
-    /// Creates a template for Alpaca-style models
-    /// - Parameter systemPrompt: Optional system message for context
-    /// - Returns: Template configured for Alpaca format
-    public static func alpaca(_ systemPrompt: String? = nil) -> Template {
-        return Template(
-            system: ("", "\n\n"),
-            user: ("### Instruction:\n", "\n\n"),
-            bot: ("### Response:\n", "\n\n"),
-            stopSequence: "###",
-            systemPrompt: systemPrompt
-        )
-    }
-
+    
     /// Creates a template for LLaMA-style models
-    /// - Parameter systemPrompt: Optional system message for context
-    /// - Returns: Template configured for LLaMA format
     public static func llama(_ systemPrompt: String? = nil) -> Template {
         return Template(
             prefix: "[INST] ",
@@ -140,7 +112,7 @@ public struct Template {
             shouldDropLast: true
         )
     }
-
+    
     /// Template configured for Mistral-style models
     public static let mistral = Template(
         user: ("[INST] ", " [/INST]"),

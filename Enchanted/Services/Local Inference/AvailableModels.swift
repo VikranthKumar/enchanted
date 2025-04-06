@@ -17,12 +17,12 @@ extension LocalModelService {
             size: "733 MB",
             promptFormat: .llama3
         ),
-        ModelDownloadInfo(
-            name: "phi-2",
-            displayName: "Phi-2",
-            url: URL(string: "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q2_K.gguf")!,
-            size: "1.17 GB",
-            promptFormat: .phi
-        )
+//        ModelDownloadInfo(
+//            name: "phi-2",
+//            displayName: "Phi-2",
+//            url: URL(string: "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q2_K.gguf")!,
+//            size: "1.17 GB",
+//            promptFormat: .phi
+//        )
     ]
 }

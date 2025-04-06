@@ -38,17 +38,6 @@ struct LocalModelsView: View {
         return localModelService.modelExists(name: model.name)
     }
     
-    func getPromptFormatName(_ format: ModelPromptFormat) -> String {
-        switch format {
-            case .llama3:
-                return "Llama 3"
-            case .gemma:
-                return "Gemma"
-            case .phi:
-                return "Phi"
-        }
-    }
-    
     func applyModelSelection(_ modelName: String) {
         // Update the selection in UserDefaults
         UserDefaults.standard.set(modelName, forKey: "selectedLocalModel")
@@ -88,7 +77,7 @@ struct LocalModelsView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     
-                                    Text("Format: \(getPromptFormatName(model.promptFormat))")
+                                    Text("Format: \(model.promptFormat.rawValue.capitalized)")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }

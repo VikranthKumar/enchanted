@@ -1,14 +1,8 @@
-//
-//  TokenSanitizer.swift
-//  Enchanted
-//
-//  Created by Vikranth Kumar on 4/2/25.
-//
-
-import Combine
+import Foundation
 
 /// A class to process and filter tokens from local inference models
 class TokenSanitizer {
+    /// List of special tokens that should be filtered out
     static let specialTokensToFilter = [
         // Basic markers
         "<s>", "</s>", "<pad>", "<eos>", "<bos>",
@@ -23,42 +17,84 @@ class TokenSanitizer {
         "<|phi|>", "<|end|>", "<|user|>", "<|assistant|>",
         
         // Mistral family
-        "<s>", "</s>", "<unk>"
+        "<s>", "</s>", "<unk>",
+        
+        // Phi-specific malformed tokens seen in output
+        "<|useruser|>", "<|assassistant|>"
     ]
     
-    /// Sanitizes raw tokens before processing
-    /// - Parameter token: The raw token string from llama.cpp
+    /// Regular expression patterns for additional token types to match
+    static let tokenPatterns = [
+        // Match Phi model's placeholder tokens like <|nnoun1|>, <|datedate1|>, etc.
+        "<\\|n[a-z]+\\d+\\|>",
+        
+        // Match any tag-like token with words and numbers
+        "<\\|[a-z]+[a-z0-9]*\\|>"
+    ]
+    
+    /// Sanitizes raw tokens from llama.cpp before processing
+    /// - Parameter token: The raw token string
     /// - Returns: A cleaned token string ready for use
     static func sanitize(token: String) -> String {
         var sanitizedToken = token
         
-        // 1. Handle special tokens that might come from the model
-        if TokenSanitizer.specialTokensToFilter.contains(token) {
+        // 1. Filter out exact special tokens
+        if specialTokensToFilter.contains(token) {
             return ""
         }
         
-        // 2. Remove any BOS (Beginning of Sequence) or EOS (End of Sequence) tokens
+        // 2. Filter out special token patterns with regex
+        for pattern in tokenPatterns {
+            sanitizedToken = sanitizedToken.replacingOccurrences(
+                of: pattern,
+                with: "",
+                options: .regularExpression
+            )
+        }
+        
+        // 3. Remove BOS/EOS tags
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "^<s>|</s>$", with: "", options: .regularExpression)
+        
+        // 4. Remove any remaining XML-like tags with words inside
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "<\\|[^\\|]+\\|>", with: "", options: .regularExpression)
         
-        // 3. Handle potential control characters
+        // 5. Filter control characters, keeping only printable chars, newlines, and tabs
         sanitizedToken = sanitizedToken.filter { char in
-            // Allow only printable characters, newlines, and tabs
             let isVisibleASCII = char.isASCII && char.isPrintable
             let isAllowedControl = char == "\n" || char == "\t"
             return isVisibleASCII || isAllowedControl || !char.isASCII
         }
         
-        // 4. Handle UTF-8 encoding issues
+        // 6. Handle UTF-8 encoding issues (if any)
         if let data = sanitizedToken.data(using: .utf8),
            let validUTF8String = String(data: data, encoding: .utf8) {
             sanitizedToken = validUTF8String
         }
         
-        // 5. Remove the diamond (◆) character specifically
+        // 7. Remove specific unwanted characters
         sanitizedToken = sanitizedToken.replacingOccurrences(of: "◆", with: "")
         
         return sanitizedToken
+    }
+    
+    /// Check if a token contains any of our filtered patterns
+    static func containsFilteredToken(_ text: String) -> Bool {
+        // Check exact matches
+        for token in specialTokensToFilter {
+            if text.contains(token) {
+                return true
+            }
+        }
+        
+        // Check regex patterns
+        for pattern in tokenPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern),
+               regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
+                return true
+            }
+        }
+        
+        return false
     }
 }
 
