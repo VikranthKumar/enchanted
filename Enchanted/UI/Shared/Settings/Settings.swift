@@ -63,22 +63,23 @@ struct Settings: View {
     
     @State var ollamaStatus: Bool?
     var body: some View {
-        SettingsView(
-            ollamaUri: $ollamaUri,
-            systemPrompt: $systemPrompt, 
-            vibrations: $vibrations,
-            colorScheme: $colorScheme,
-            defaultOllamModel: $defaultOllamaModel, 
-            ollamaBearerToken: $ollamaBearerToken,
-            appUserInitials: $appUserInitials,
-            pingInterval: $pingInterval,
-            voiceIdentifier: $voiceIdentifier,
-            save: save,
-            checkServer: checkServer,
-            deleteAll: deleteAll,
-            ollamaLangugeModels: languageModelStore.models,
-            voices: speechSynthesiser.voices
-        )
+        SettingsView()
+//        SettingsView(
+//            ollamaUri: $ollamaUri,
+//            systemPrompt: $systemPrompt, 
+//            vibrations: $vibrations,
+//            colorScheme: $colorScheme,
+//            defaultOllamModel: $defaultOllamaModel, 
+//            ollamaBearerToken: $ollamaBearerToken,
+//            appUserInitials: $appUserInitials,
+//            pingInterval: $pingInterval,
+//            voiceIdentifier: $voiceIdentifier,
+//            save: save,
+//            checkServer: checkServer,
+//            deleteAll: deleteAll,
+//            ollamaLangugeModels: languageModelStore.models,
+//            voices: speechSynthesiser.voices
+//        )
         .frame(maxWidth: 700)
         #if os(visionOS)
         .frame(minWidth: 600, minHeight: 800)

@@ -10,13 +10,14 @@ import SwiftData
 import OllamaKit
 import Combine
 import SwiftUI
+import MLX
 
 @Observable
 final class ConversationStore: Sendable {
     static let shared = ConversationStore(swiftDataService: SwiftDataService.shared)
     
-    private var swiftDataService: SwiftDataService
-    private var generation: AnyCancellable?
+    var swiftDataService: SwiftDataService
+    var generation: AnyCancellable?
     
     /// For some reason (SwiftUI bug / too frequent UI updates) updating UI for each stream message sometimes freezes the UI.
     /// Throttling UI updates seem to fix the issue.
@@ -31,7 +32,8 @@ final class ConversationStore: Sendable {
     @MainActor var conversations: [ConversationSD] = []
     @MainActor var selectedConversation: ConversationSD?
     @MainActor var messages: [MessageSD] = []
-    // Add this property to ConversationStore
+    
+    // MLX specific properties
     @MainActor private var useLocalInference: Bool {
         UserDefaults.standard.bool(forKey: "useLocalInference")
     }
@@ -75,7 +77,6 @@ final class ConversationStore: Sendable {
         }
     }
     
-    
     func create(_ conversation: ConversationSD) async throws {
         try await swiftDataService.createConversation(conversation)
     }
@@ -87,8 +88,8 @@ final class ConversationStore: Sendable {
         )
         
         DispatchQueue.main.async {
-                self.messages = messages
-                self.selectedConversation = selectedConversation
+            self.messages = messages
+            self.selectedConversation = selectedConversation
         }
     }
     
@@ -113,47 +114,57 @@ final class ConversationStore: Sendable {
         }
     }
     
+    // Main method for sending prompts - uses the mixed backend
     @MainActor
     func sendPrompt(userPrompt: String, model: LanguageModelSD, image: Image? = nil, systemPrompt: String = "", trimmingMessageId: String? = nil) {
+        sendPromptWithMixedBackend(
+            userPrompt: userPrompt,
+            model: model,
+            image: image,
+            systemPrompt: systemPrompt,
+            trimmingMessageId: trimmingMessageId
+        )
+    }
+    
+    // Mixed backend implementation that handles both MLX and Ollama
+    @MainActor
+    func sendPromptWithMixedBackend(
+        userPrompt: String,
+        model: LanguageModelSD,
+        image: Image? = nil,
+        systemPrompt: String = "",
+        trimmingMessageId: String? = nil
+    ) {
         guard userPrompt.trimmingCharacters(in: .whitespacesAndNewlines).count > 0 else { return }
         
-        // Determine appropriate model based on inference preference
-        var selectedModel = model
-        
-        // If local inference is enabled, but an Ollama model is selected, try to find a local model
-        if useLocalInference && model.modelProvider != .local {
-            if let localModel = LanguageModelStore.shared.models.first(where: { $0.modelProvider == .local }) {
-                selectedModel = localModel
-            }
-        }
-        
+        // Set up conversation
         let conversation = selectedConversation ?? ConversationSD(name: userPrompt)
         conversation.updatedAt = Date.now
-        conversation.model = selectedModel
+        conversation.model = model
         
-        // trim conversation if on edit mode
+        // Trim conversation if on edit mode
         if let trimmingMessageId = trimmingMessageId {
             conversation.messages = conversation.messages
                 .sorted{$0.createdAt < $1.createdAt}
                 .prefix(while: {$0.id.uuidString != trimmingMessageId})
         }
         
-        // add system prompt to very first message in the conversation
+        // Add system prompt to very first message in the conversation
         if !systemPrompt.isEmpty && conversation.messages.isEmpty {
             let systemMessage = MessageSD(content: systemPrompt, role: "system")
             systemMessage.conversation = conversation
         }
         
-        // construct new message
+        // Construct new message
         let userMessage = MessageSD(content: userPrompt, role: "user", image: image?.render()?.compressImageData())
         userMessage.conversation = conversation
         
-        // prepare message history
+        // Prepare message history
         var messageHistory = conversation.messages
             .sorted{$0.createdAt < $1.createdAt}
             .map{OKChatRequestData.Message(role: OKChatRequestData.Message.Role(rawValue: $0.role) ?? .assistant, content: $0.content)}
         
-        // attach selected image to the last Message
+        // Attach selected image to the last Message
         if let image = image?.render() {
             if let lastMessage = messageHistory.popLast() {
                 let imagesBase64: [String] = [image.convertImageToBase64String()]
@@ -174,29 +185,38 @@ final class ConversationStore: Sendable {
             try await reloadConversation(conversation)
             try? await loadConversations()
             
-            // Determine which service to use based on model provider
-            if selectedModel.modelProvider == .local {
-                // Always use local service if model is local
-                handleLocalInference(selectedModel, messageHistory)
+            // Determine which backend to use
+            let isMLXModel = MLXIntegration.shared.isMLXModel(model.name)
+            
+            if model.modelProvider == .local && isMLXModel {
+                // Use MLX backend
+                handleMixedInference(model, messageHistory, useMLX: true)
+            } else if model.modelProvider == .local {
+                // Use llama.cpp backend (original implementation)
+                handleMixedInference(model, messageHistory, useMLX: false)
             } else if await OllamaService.shared.reachable() {
-                // Use Ollama if server is reachable
-                handleOllamaInference(selectedModel, messageHistory)
+                // Use Ollama for remote models
+                handleOllamaInference(model, messageHistory)
             } else if useLocalInference {
-                // Fall back to local inference if Ollama unreachable but local is enabled
+                // Fall back to local inference if available
                 if let localModel = await findAvailableLocalModel() {
                     // Update conversation to use local model
                     conversation.model = localModel
                     try? await swiftDataService.updateConversation(conversation)
-                    handleLocalInference(localModel, messageHistory)
+                    
+                    // Determine if it's an MLX model
+                    let isMLXModel = MLXIntegration.shared.isMLXModel(localModel.name)
+                    handleMixedInference(localModel, messageHistory, useMLX: isMLXModel)
                 } else {
                     self.handleError("No local models available. Please download a model in Settings.")
                 }
             } else {
-                self.handleError("Ollama server unreachable")
+                self.handleError("Model backend not available. Check your network connection or enable local inference.")
             }
         }
     }
     
+    // Find an available local model
     @MainActor
     private func findAvailableLocalModel() async -> LanguageModelSD? {
         // Check if a specific local model is selected
@@ -207,49 +227,32 @@ final class ConversationStore: Sendable {
             }
         }
         
-        // Check if any local models are available as fallback
-        let localModels = try? await LocalModelService.shared.getModels()
-        if let localModels = localModels, !localModels.isEmpty {
-            // If we have models but not the selected one, update the selection
-            let localModelName = localModels.first!.name
-            UserDefaults.standard.set(localModelName, forKey: "selectedLocalModel")
-            
-            // Find the corresponding LanguageModelSD
-            return LanguageModelStore.shared.models.first(where: { $0.name == localModelName })
+        // First try MLX models
+        let mlxModels = LanguageModelStore.shared.models.filter {
+            $0.modelProvider == .local && $0.name.lowercased().contains("mlx")
+        }
+        
+        if let firstMLXModel = mlxModels.first {
+            // Update the selection
+            UserDefaults.standard.set(firstMLXModel.name, forKey: "selectedLocalModel")
+            return firstMLXModel
+        }
+        
+        // Then try any local model
+        let localModels = LanguageModelStore.shared.models.filter { $0.modelProvider == .local }
+        
+        if let firstLocalModel = localModels.first {
+            // Update the selection
+            UserDefaults.standard.set(firstLocalModel.name, forKey: "selectedLocalModel")
+            return firstLocalModel
         }
         
         return nil
     }
     
+    // Handle Ollama inference
     @MainActor
-    private func handleLocalInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
-        print("Starting local inference with model: \(model.name)")
-        
-        DispatchQueue.global(qos: .background).async {
-            var request = OKChatRequestData(model: model.name, messages: messageHistory)
-            request.options = OKCompletionOptions(temperature: 0)
-            
-            print("Sending request to local model with \(messageHistory.count) messages")
-            
-            self.generation = LocalModelService.shared.chat(data: request)
-                .sink(receiveCompletion: { [weak self] completion in
-                    switch completion {
-                        case .finished:
-                            print("Local inference completed successfully")
-                            self?.handleComplete()
-                        case .failure(let error):
-                            print("Local inference error: \(error.localizedDescription)")
-                            self?.handleError(error.localizedDescription)
-                    }
-                }, receiveValue: { [weak self] response in
-                    print("Received local inference response: \(response.message?.content ?? "nil")")
-                    self?.handleReceive(response)
-                })
-        }
-    }
-    
-    @MainActor
-    private func handleOllamaInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
+    func handleOllamaInference(_ model: LanguageModelSD, _ messageHistory: [OKChatRequestData.Message]) {
         DispatchQueue.global(qos: .background).async {
             var request = OKChatRequestData(model: model.name, messages: messageHistory)
             request.options = OKCompletionOptions(temperature: 0)
@@ -268,8 +271,60 @@ final class ConversationStore: Sendable {
         }
     }
     
+    // Handle inference with the appropriate backend
     @MainActor
-    private func handleReceive(_ response: OKChatResponse)  {
+    func handleMixedInference(
+        _ model: LanguageModelSD,
+        _ messageHistory: [OKChatRequestData.Message],
+        useMLX: Bool
+    ) {
+        DispatchQueue.global(qos: .background).async {
+            var request = OKChatRequestData(model: model.name, messages: messageHistory)
+            request.options = OKCompletionOptions(temperature: 0)
+            
+            print("Sending request to \(useMLX ? "MLX" : "llama.cpp") model: \(model.name)")
+            
+            if useMLX {
+                // Use MLX backend
+                self.generation = MLXLocalModelService.shared.chat(data: request)
+                    .sink(receiveCompletion: { [weak self] completion in
+                        switch completion {
+                            case .finished:
+                                print("MLX inference completed successfully")
+                                self?.handleComplete()
+                            case .failure(let error):
+                                print("MLX inference error: \(error.localizedDescription)")
+                                self?.handleError(error.localizedDescription)
+                        }
+                    }, receiveValue: { [weak self] response in
+                        self?.handleReceive(response)
+                    })
+//            } else if let localModelService = MLXLocalModelService.shared {
+//                // Use llama.cpp backend
+//                self.generation = localModelService.chat(data: request)
+//                    .sink(receiveCompletion: { [weak self] completion in
+//                        switch completion {
+//                            case .finished:
+//                                print("llama.cpp inference completed successfully")
+//                                self?.handleComplete()
+//                            case .failure(let error):
+//                                print("llama.cpp inference error: \(error.localizedDescription)")
+//                                self?.handleError(error.localizedDescription)
+//                        }
+//                    }, receiveValue: { [weak self] response in
+//                        self?.handleReceive(response)
+//                    })
+            } else {
+                // No local model service available
+                DispatchQueue.main.async {
+                    self.handleError("Local inference service not available")
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    func handleReceive(_ response: OKChatResponse)  {
         if messages.isEmpty { return }
         
         if let responseContent = response.message?.content {
@@ -285,7 +340,7 @@ final class ConversationStore: Sendable {
     }
     
     @MainActor
-    private func handleError(_ errorMessage: String) {
+    func handleError(_ errorMessage: String) {
         guard let lastMesasge = messages.last else { return }
         lastMesasge.error = true
         lastMesasge.done = false
@@ -300,7 +355,7 @@ final class ConversationStore: Sendable {
     }
     
     @MainActor
-    private func handleComplete() {
+    func handleComplete() {
         guard let lastMesasge = messages.last else { return }
         lastMesasge.error = false
         lastMesasge.done = true

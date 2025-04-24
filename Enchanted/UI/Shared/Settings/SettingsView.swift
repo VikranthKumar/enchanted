@@ -6,318 +6,256 @@
 //
 
 import SwiftUI
-import AVFoundation
 
 struct SettingsView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @Binding var ollamaUri: String
-    @Binding var systemPrompt: String
-    @Binding var vibrations: Bool
-    @Binding var colorScheme: AppColorScheme
-    @Binding var defaultOllamModel: String
-    @Binding var ollamaBearerToken: String
-    @Binding var appUserInitials: String
-    @Binding var pingInterval: String
-    @Binding var voiceIdentifier: String
-    @State var ollamaStatus: Bool?
-    var save: () -> ()
-    var checkServer: () -> ()
-    var deleteAll: () -> ()
-    var ollamaLangugeModels: [LanguageModelSD]
-    var voices: [AVSpeechSynthesisVoice]
-    
-    @State private var deleteConversationsDialog = false
+    @AppStorage("colorScheme") private var colorScheme: AppColorScheme = .system
+    @AppStorage("ollamaUri") private var ollamaUri: String = "http://localhost:11434"
+    @AppStorage("ollamaBearerToken") private var ollamaBearerToken: String = ""
+    @AppStorage("systemPrompt") private var systemPrompt: String = ""
+    @AppStorage("menuBarIcon") private var menuBarIcon: String = "brain.head.profile"
+    @AppStorage("vibrations") private var vibrations: Bool = true
     @AppStorage("useLocalInference") private var useLocalInference: Bool = false
-    @State private var showLocalModelsSheet = false
-    @State private var downloadedModelsCount: Int = 0
-    @AppStorage("selectedLocalModel") private var selectedLocalModel: String = ""
-
+    @AppStorage("showBothBackends") private var showBothBackends: Bool = false
+    @AppStorage("appUserInitials") private var userInitials: String = ""
+    @AppStorage("defaultOllamaModel") private var defaultOllamaModel: String = ""
+    @AppStorage("autoSaveConversations") private var autoSaveConversations: Bool = true
+    @AppStorage("pingInterval") private var pingInterval: String = "5"
     
-    func updateDownloadedModelsCount() {
-        Task {
-            if useLocalInference {
-                let models = try? await LocalModelService.shared.getModels()
-                DispatchQueue.main.async {
-                    downloadedModelsCount = models?.count ?? 0
-                }
-            }
-        }
-    }
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var systemColorScheme
+    
+    @State private var isOllmaReachable = false
+    @State private var isMLXEnabled = false
+    @State private var showMLXModelsSheet = false
+    @State private var localModelsCount = 0
+    @State private var voiceIdentifier: String = UserDefaults.standard.string(forKey: "voiceIdentifier") ?? ""
+    @StateObject private var speechSynthesizer = SpeechSynthesizer.shared
     
     var body: some View {
-        VStack {
-            ZStack {
-                HStack {
-                    Button {
-                        presentationMode.wrappedValue.dismiss()
-                    } label: {
-                        Text("Cancel")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color(.label))
+        VStack(alignment: .leading) {
+            Form {
+                Section(header: Text("App Settings")) {
+                    Picker("Appearance", selection: $colorScheme) {
+                        ForEach(AppColorScheme.allCases) { scheme in
+                            Text(scheme.toString)
+                                .tag(scheme)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    // Inference Mode
+                    Picker("Inference Mode", selection: $useLocalInference) {
+                        Text("Ollama").tag(false)
+                        Text("Local").tag(true)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .onChange(of: useLocalInference) { _, newValue in
+                        Task {
+                            await refreshModels()
+                        }
                     }
                     
+                    Toggle("Show Both Backends", isOn: $showBothBackends)
+                        .onChange(of: showBothBackends) { _, _ in
+                            Task {
+                                await refreshModels()
+                            }
+                        }
                     
-                    Spacer()
-                    
-                    Button(action: save) {
-                        Text("Save")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color(.label))
+                    TextField("Your Initials", text: $userInitials)
+                        .onChange(of: userInitials) { _, newValue in
+                            if newValue.count > 2 {
+                                userInitials = String(newValue.prefix(2))
+                            }
+                        }
+                }
+                
+                // Local Inference Section
+                if useLocalInference {
+                    Section(header: Text("Local Inference")) {
+                        HStack {
+                            Text("Local Models")
+                            Spacer()
+                            Text("\(localModelsCount) models installed")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Button("Manage MLX Models") {
+                            showMLXModelsSheet = true
+                        }
+                        
+                        // Status indicator
+                        HStack {
+                            Text("MLX Status")
+                            Spacer()
+                            Text(isMLXEnabled ? "Available" : "Not Available")
+                                .foregroundColor(isMLXEnabled ? .green : .red)
+                        }
+                        
+                        // Explanation text
+                        Text("Local inference uses MLX to run models directly on your device without sending data to external servers. Models need to be downloaded before they can be used.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
-                HStack {
-                    Spacer()
-                    Text("Settings")
-                        .font(.system(size: 16))
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color(.label))
-                    Spacer()
-                }
-            }
-            .padding()
-            
-            Form {
-                Section(header: Text("LOCAL INFERENCE").font(.headline).padding(.top, 20)) {
-                    Toggle(isOn: $useLocalInference.onChange { newValue in
-                        if newValue {
-                            updateDownloadedModelsCount()
-                            selectLocalModel() // Auto-select a local model
-                        }
-                    }, label: {
-                        Label("Use Local Inference", systemImage: "cpu")
-                            .foregroundStyle(Color.label)
-                    })
-                    
-                    Button(action: { showLocalModelsSheet.toggle() }) {
-                        HStack {
-                            Label("Manage Local Models", systemImage: "square.and.arrow.down")
-                                .foregroundStyle(Color.label)
-                            
-                            Spacer()
-                            
-                            if downloadedModelsCount > 0 {
-                                Text("\(downloadedModelsCount) models")
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                        }
-                    }
-                    .disabled(!useLocalInference)
-                    .sheet(isPresented: $showLocalModelsSheet) {
-                        LocalModelsView()
-                    }
-                    
-                    if useLocalInference {
-                        Text("Models will run directly on your device without requiring an Ollama server")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Enables running LLMs directly on this device without requiring an Ollama server")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Section(header: Text("Ollama").font(.headline)) {
-                    
-                    TextField("Ollama server URI", text: $ollamaUri, onCommit: checkServer)
-                        .textContentType(.URL)
-                        .disableAutocorrection(true)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-#if !os(macOS)
-                        .padding(.top, 8)
-                        .keyboardType(.URL)
-                        .autocapitalization(.none)
-#endif
-                    
-                    VStack(alignment: .leading) {
-                        Text("System prompt")
-                        TextEditor(text: $systemPrompt)
-                            .font(.system(size: 13))
-                            .cornerRadius(4)
-                            .multilineTextAlignment(.leading)
-                            .frame(minHeight: 100)
-                    }
-                    
-                    Picker(selection: $defaultOllamModel) {
-                        ForEach(ollamaLangugeModels, id:\.self) { model in
-                            Text(model.name).tag(model.name)
-                        }
-                    } label: {
-                        Label {
-                            Text("Default Model")
-                        } icon: {
-                            Image("ollama")
-                                .renderingMode(.template)
-                                .resizable()
-                                .scaledToFit()
-                                .foregroundColor(Color(.label))
-                                .frame(width: 24, height: 24)
-                        }
-                    }
-                    
-                    
-                    TextField("Bearer Token", text: $ollamaBearerToken)
-                        .disableAutocorrection(true)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-#if os(iOS)
-                        .autocapitalization(.none)
-#endif
-                    TextField("Ping Interval (seconds)", text: $pingInterval)
-                        .disableAutocorrection(true)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Section(header: Text("APP").font(.headline).padding(.top, 20)) {
+                // Ollama Section (always show, but with different content if local inference is enabled)
+                Section(header: Text("Ollama Settings")) {
+                    if !useLocalInference {
+                        TextField("Server endpoint", text: $ollamaUri)
+                        TextField("Bearer Token (optional)", text: $ollamaBearerToken)
                         
-#if os(iOS)
-                        Toggle(isOn: $vibrations, label: {
-                            Label("Vibrations", systemImage: "water.waves")
-                                .foregroundStyle(Color.label)
-                        })
-#endif
-                    }
-                    
-                    
-                    Picker(selection: $colorScheme) {
-                        ForEach(AppColorScheme.allCases, id:\.self) { scheme in
-                            Text(scheme.toString).tag(scheme.id)
+                        HStack {
+                            Text("Status")
+                            Spacer()
+                            Text(isOllmaReachable ? "Reachable" : "Unreachable")
+                                .foregroundColor(isOllmaReachable ? .green : .red)
                         }
-                    } label: {
-                        Label("Appearance", systemImage: "sun.max")
-                            .foregroundStyle(Color.label)
+                    } else {
+                        Text("Ollama settings are disabled when using local inference. Switch inference mode to Ollama to configure these settings.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    
-                    Picker(selection: $voiceIdentifier) {
-                        ForEach(voices, id:\.self.identifier) { voice in
+                }
+                
+                Section(header: Text("Voice")) {
+                    Picker("Voice", selection: $voiceIdentifier) {
+                        ForEach(speechSynthesizer.voices.sorted(by: { $0.name < $1.name }), id: \.identifier) { voice in
                             Text(voice.prettyName).tag(voice.identifier)
                         }
-                    } label: {
-                        Label("Voice", systemImage: "waveform")
-                            .foregroundStyle(Color.label)
-                        
-#if os(macOS)
-                        Text("Download voices by going to Settings > Accessibility > Spoken Content > System Voice > Manage Voices.")
-#else
-                        Text("Download voices by going to Settings > Accessibility > Spoken Content > Voices.")
-#endif
-                        
-                        Button(action: {
-#if os(macOS)
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.universalaccess?SpeakableItems") {
-                                NSWorkspace.shared.open(url)
-                            }
-#else
-                            let url = URL(string: "App-Prefs:root=General&path=ACCESSIBILITY")
-                            if let url = url, UIApplication.shared.canOpenURL(url) {
-                                UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                            }
-#endif
-                            
-                        }) {
-                            
-                            Text("Open Settings")
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .onChange(of: voiceIdentifier) { _, newValue in
+                        UserDefaults.standard.set(newValue, forKey: "voiceIdentifier")
                     }
                     
-                    
-                    TextField("Initials", text: $appUserInitials)
-                        .disableAutocorrection(true)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
 #if os(iOS)
-                        .keyboardType(.URL)
-                        .autocapitalization(.none)
+                    Toggle("Vibrations", isOn: $vibrations)
+#endif
+                }
+                
+                Section(header: Text("System Prompt")) {
+                    TextEditor(text: $systemPrompt)
+                        .frame(minHeight: 100)
+                }
+                
+                Section(header: Text("Advanced")) {
+                    TextField("Ping interval (seconds)", text: $pingInterval)
+                        .keyboardType(.numberPad)
+                    
+                    Toggle("Auto-save conversations", isOn: $autoSaveConversations)
+                    
+#if os(macOS)
+                    HStack {
+                        Text("Menu bar icon")
+                        Spacer()
+                        Picker("", selection: $menuBarIcon) {
+                            Image(systemName: "brain.head.profile").tag("brain.head.profile")
+                            Image(systemName: "sparkles").tag("sparkles")
+                            Image(systemName: "wand.and.stars").tag("wand.and.stars")
+                            Image(systemName: "wand.and.rays").tag("wand.and.rays")
+                            Image(systemName: "lock").tag("lock")
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                        .labelsHidden()
+                    }
 #endif
                     
-                    Button(action: {deleteConversationsDialog.toggle()}) {
-                        HStack {
-                            Spacer()
-                            
-                            Text("Clear All Data")
-                                .foregroundStyle(Color(.systemRed))
-                                .padding(.vertical, 6)
-                            
-                            Spacer()
-                        }
+                    Button("Reset Settings") {
+                        resetSettings()
                     }
+                    .foregroundColor(.red)
+                }
+                
+                Section(header: Text("About")) {
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text("1.4")
+                    }
+                    
+                    HStack {
+                        Text("Ollama Library")
+                        Spacer()
+                        Text("v0.0.1")
+                    }
+                    
+                    HStack {
+                        Text("MLX Library")
+                        Spacer()
+                        Text("v0.0.9")
+                    }
+                    
+                    Link("GitHub Repository", destination: URL(string: "https://github.com/AugustDev/enchanted")!)
                 }
             }
-            .formStyle(.grouped)
-        }
-        .preferredColorScheme(colorScheme.toiOSFormat)
-        .confirmationDialog("Delete All Conversations?", isPresented: $deleteConversationsDialog) {
-            Button("Delete", role: .destructive) { deleteAll() }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Delete All Conversations?")
         }
         .onAppear {
-            updateDownloadedModelsCount()
-            if useLocalInference && LanguageModelStore.shared.selectedModel?.modelProvider != .local {
-                selectLocalModel()
+            // Check API reachability
+            Task {
+                isOllmaReachable = await OllamaService.shared.reachable()
+                
+                // Check MLX availability
+                isMLXEnabled = true // MLX is always available if compiled in
+                
+                // Count local models
+                do {
+                    let models = try await MLXLocalModelService.shared.getModels()
+                    localModelsCount = models.count
+                } catch {
+                    print("Error counting local models: \(error)")
+                    localModelsCount = 0
+                }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LocalModelSelected"))) { _ in
-            updateDownloadedModelsCount()
-        }
-    }
-    
-    func selectLocalModel() {
-        Task {
-            let models = try? await LocalModelService.shared.getModels()
-            DispatchQueue.main.async {
-                if let firstModel = models?.first {
-                    print("Auto-selecting local model: \(firstModel.name)")
-                    selectedLocalModel = firstModel.name
-                    
-                    // Update the model in LanguageModelStore
-                    if let localModelSD = LanguageModelStore.shared.models.first(where: { $0.name == firstModel.name }) {
-                        LanguageModelStore.shared.setModel(model: localModelSD)
-                    } else {
-                        print("Selected local model not found in LanguageModelStore")
+        .sheet(isPresented: $showMLXModelsSheet) {
+            MLXModelsView()
+                .modifier(MLXSheetSizeModifier())
+                .onDisappear {
+                    Task {
+                        // Get updated model count
+                        do {
+                            let models = try await MLXLocalModelService.shared.getModels()
+                            localModelsCount = models.count
+                        } catch {
+                            print("Error counting local models: \(error)")
+                            localModelsCount = 0
+                        }
                     }
-                } else {
-                    print("No local models available for auto-selection")
                 }
-            }
         }
     }
     
-    func selectPreferredLocalModel() async {
-        // Get available local models
-        if let localModels = try? await LocalModelService.shared.getModels(),
-           !localModels.isEmpty {
-            // Select the first available local model
-            DispatchQueue.main.async {
-                let localModelName = localModels.first!.name
-                // Find the corresponding LanguageModelSD
-                if let localModel = LanguageModelStore.shared.models.first(where: { $0.name == localModelName }) {
-                    LanguageModelStore.shared.setModel(model: localModel)
-                }
-            }
+    // Reset settings to default values
+    private func resetSettings() {
+        colorScheme = .system
+        ollamaUri = "http://localhost:11434"
+        ollamaBearerToken = ""
+        systemPrompt = ""
+        menuBarIcon = "brain.head.profile"
+        vibrations = true
+        useLocalInference = false
+        showBothBackends = false
+        userInitials = ""
+        defaultOllamaModel = ""
+        autoSaveConversations = true
+        pingInterval = "5"
+    }
+    
+    // Refresh models
+    private func refreshModels() async {
+        await LanguageModelStore.shared.refreshModelsWithMLX()
+        
+        // Get updated model count
+        do {
+            let models = try await MLXLocalModelService.shared.getModels()
+            localModelsCount = models.count
+        } catch {
+            print("Error counting local models: \(error)")
+            localModelsCount = 0
         }
     }
 }
 
 #Preview {
-    SettingsView(
-        ollamaUri: .constant(""),
-        systemPrompt: .constant("You are an intelligent assistant solving complex problems. You are an intelligent assistant solving complex problems. You are an intelligent assistant solving complex problems."),
-        vibrations: .constant(true),
-        colorScheme: .constant(.light),
-        defaultOllamModel: .constant("llama2"),
-        ollamaBearerToken: .constant("x"),
-        appUserInitials: .constant("AM"),
-        pingInterval: .constant("5"),
-        voiceIdentifier: .constant("sample"),
-        save: {},
-        checkServer: {},
-        deleteAll: {},
-        ollamaLangugeModels: LanguageModelSD.sample,
-        voices: []
-    )
+    SettingsView()
 }
-

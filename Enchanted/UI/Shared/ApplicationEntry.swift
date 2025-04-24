@@ -65,7 +65,7 @@ struct ApplicationEntry: View {
             print("Local inference enabled: \(useLocalInference)")
             
             // Initialize model store first
-            await LocalModelService.shared.initializeModels()
+            await MLXLocalModelService.shared.initializeModels()
             await languageModelStore.initialize()
             
             // Then load conversations

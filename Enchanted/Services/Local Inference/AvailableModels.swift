@@ -8,21 +8,44 @@
 import Foundation
 
 // Predefined models
-extension LocalModelService {
+extension MLXLocalModelService {
+    // List of available models for download
     static let availableModels = [
-        ModelDownloadInfo(
-            name: "llama-3-1b-instruct",
-            displayName: "Llama 3.2 1B Instruct",
-            url: URL(string: "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q3_K_L.gguf")!,
-            size: "733 MB",
+        MLXModelDownloadInfo(
+            name: "mlx-tinyllama-1.1b",
+            displayName: "TinyLlama 1.1B (MLX)",
+            url: URL(string: "https://huggingface.co/mlx-community/tinyllama-1.1b-mlx/resolve/main/tinyllama-1.1b-mlx.safetensors")!,
+            fileExtension: "gguf",
+            tokenizerURL: URL(string: "https://huggingface.co/mlx-community/tinyllama-1.1b-mlx/resolve/main/tokenizer.model")!,
+            size: "550 MB",
             promptFormat: .llama3
         ),
-//        ModelDownloadInfo(
-//            name: "phi-2",
-//            displayName: "Phi-2",
-//            url: URL(string: "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q2_K.gguf")!,
-//            size: "1.17 GB",
-//            promptFormat: .phi
-//        )
+        MLXModelDownloadInfo(
+            name: "mlx-phi-2",
+            displayName: "Phi-2 (MLX)",
+            url: URL(string: "https://huggingface.co/mlx-community/phi-2-mlx/resolve/main/phi-2-mlx.safetensors")!,
+            fileExtension: "gguf",
+            tokenizerURL: URL(string: "https://huggingface.co/mlx-community/phi-2-mlx/resolve/main/tokenizer.json")!,
+            size: "1.1 GB",
+            promptFormat: .phi
+        ),
+        MLXModelDownloadInfo(
+            name: "mlx-gemma-3-1b",
+            displayName: "Gemma 3 1B (MLX)",
+            url: URL(string: "https://huggingface.co/mlx-community/gemma-3-1b-it-8bit/blob/main/model.safetensors")!,
+            fileExtension: "gguf",
+            tokenizerURL: URL(string: "https://huggingface.co/mlx-community/gemma-3-1b-it-8bit/blob/main/tokenizer.json")!,
+            size: "1.4 GB",
+            promptFormat: .gemma
+        ),
+        MLXModelDownloadInfo(
+            name: "mlx-mistral-7b",
+            displayName: "Mistral 7B (MLX)",
+            url: URL(string: "https://huggingface.co/mlx-community/mistral-7b-v0.1-mlx/resolve/main/mistral-7b-v0.1-mlx.safetensors")!,
+            fileExtension: "gguf",
+            tokenizerURL: URL(string: "https://huggingface.co/mlx-community/mistral-7b-v0.1-mlx/resolve/main/tokenizer.json")!,
+            size: "3.9 GB",
+            promptFormat: .mistral
+        )
     ]
 }

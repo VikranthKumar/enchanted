@@ -72,11 +72,8 @@ final class AppStore {
     }
     
     private func reachable() async -> Bool {
-        if UserDefaults.standard.bool(forKey: "useLocalInference") {
-            return true // Always consider reachable when local inference is enabled
-        }
-        
-        return await OllamaService.shared.reachable()
+        return await MLXIntegration.shared.mixedReachable()
+
     }
     
     private func startCheckingReachability(interval: TimeInterval = 5) {

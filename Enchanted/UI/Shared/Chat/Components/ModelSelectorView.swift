@@ -17,21 +17,23 @@ struct ModelSelectorView: View {
     @State private var localModels: [LanguageModel] = []
     @AppStorage("selectedLocalModel") private var selectedLocalModel: String = ""
     @AppStorage("useLocalInference") private var useLocalInference: Bool = false
-    @State private var showLocalModelsSheet = false
+    @State private var showMLXModelsSheet = false
     
     // Load local models
     func loadLocalModels() {
         Task {
-            if useLocalInference, let models = try? await LocalModelService.shared.getModels() {
-                DispatchQueue.main.async {
-                    self.localModels = models
+            if useLocalInference {
+                do {
+                    localModels = try await MLXLocalModelService.shared.getModels()
                     
                     // If we have no selected local model but have local models, select the first one
-                    if selectedLocalModel.isEmpty && !models.isEmpty {
-                        selectedLocalModel = models[0].name
+                    if selectedLocalModel.isEmpty && !localModels.isEmpty {
+                        selectedLocalModel = localModels[0].name
                         // Find the corresponding LanguageModelSD
-                        updateLocalModelSelection(models[0].name)
+                        updateLocalModelSelection(localModels[0].name)
                     }
+                } catch {
+                    print("Error loading local models: \(error)")
                 }
             }
         }
@@ -45,7 +47,7 @@ struct ModelSelectorView: View {
             // If model isn't in modelsList yet, we need to refresh the list
             print("Selected local model not in models list, refreshing...")
             Task {
-                try? await LanguageModelStore.shared.loadLocalModelsOnly()
+                try? await LanguageModelStore.shared.refreshModelsWithMLX()
                 
                 // Try again after refresh
                 DispatchQueue.main.async {
@@ -59,6 +61,7 @@ struct ModelSelectorView: View {
     
     var body: some View {
         Group {
+            // Use appropriate menu based on inference type
             if useLocalInference {
                 // Local inference menu
                 Menu {
@@ -69,7 +72,7 @@ struct ModelSelectorView: View {
                         Divider()
                         
                         Button(action: {
-                            showLocalModelsSheet = true
+                            showMLXModelsSheet = true
                         }) {
                             Label("Download Models...", systemImage: "square.and.arrow.down")
                         }
@@ -94,14 +97,14 @@ struct ModelSelectorView: View {
                         Divider()
                         
                         Button(action: {
-                            showLocalModelsSheet = true
+                            showMLXModelsSheet = true
                         }) {
                             Label("Manage Models...", systemImage: "square.and.arrow.down")
                         }
                     }
                 } label: {
                     HStack(alignment: .center) {
-                        if let selectedModel = selectedModel, selectedModel.modelProvider == .local, !selectedLocalModel.isEmpty {
+                        if let selectedModel = selectedModel, selectedModel.modelProvider == .local {
                             HStack(alignment: .bottom, spacing: 5) {
                                 
 #if os(macOS) || os(visionOS)
@@ -109,11 +112,20 @@ struct ModelSelectorView: View {
                                     .font(.body)
                                 
                                 HStack(spacing: 2) {
-                                    Image(systemName: "cpu")
-                                        .font(.caption)
-                                    
-                                    Text("Local")
-                                        .font(.caption)
+                                    // Show MLX or Local badge
+                                    if selectedModel.name.lowercased().contains("mlx") {
+                                        Image(systemName: "cpu")
+                                            .font(.caption)
+                                        
+                                        Text("MLX")
+                                            .font(.caption)
+                                    } else {
+                                        Image(systemName: "desktopcomputer")
+                                            .font(.caption)
+                                        
+                                        Text("Local")
+                                            .font(.caption)
+                                    }
                                 }
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 6)
@@ -128,11 +140,20 @@ struct ModelSelectorView: View {
                                             .foregroundColor(Color.labelCustom)
                                         
                                         HStack(spacing: 2) {
-                                            Image(systemName: "cpu")
-                                                .font(.caption)
-                                            
-                                            Text("Local")
-                                                .font(.caption)
+                                            // Show MLX or Local badge
+                                            if selectedModel.name.lowercased().contains("mlx") {
+                                                Image(systemName: "cpu")
+                                                    .font(.caption)
+                                                
+                                                Text("MLX")
+                                                    .font(.caption)
+                                            } else {
+                                                Image(systemName: "desktopcomputer")
+                                                    .font(.caption)
+                                                
+                                                Text("Local")
+                                                    .font(.caption)
+                                            }
                                         }
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 6)
@@ -140,7 +161,6 @@ struct ModelSelectorView: View {
                                         .background(Color.green)
                                         .clipShape(Capsule())
                                     }
-                                    
                                 }
 #endif
                             }
@@ -149,21 +169,22 @@ struct ModelSelectorView: View {
                                 .foregroundColor(Color.labelCustom)
                         }
                         
-                        Image(systemName: "chevron.down")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 10)
-                            .foregroundColor(Color(.label))
-                            .showIf(showChevron)
+                        if showChevron {
+                            Image(systemName: "chevron.down")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 10)
+                                .foregroundColor(Color(.label))
+                        }
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
                 }
-                .sheet(isPresented: $showLocalModelsSheet) {
-                    LocalModelsView()
-                        .modifier(SheetSizeModifier())
+                .sheet(isPresented: $showMLXModelsSheet) {
+                    MLXModelsView()
+                        .modifier(MLXSheetSizeModifier())
                 }
                 .onAppear {
                     loadLocalModels()
@@ -171,10 +192,11 @@ struct ModelSelectorView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDownloadCompleted"))) { _ in
                     loadLocalModels()
                 }
-                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDeleted"))) { notification in
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ModelDeleted"))) { _ in
                     loadLocalModels()
                 }
             } else {
+                // Standard Ollama menu
                 Menu {
                     ForEach(modelsList.filter { $0.modelProvider == .ollama }, id: \.self) { model in
                         Button(action: {
@@ -197,6 +219,20 @@ struct ModelSelectorView: View {
                             }
                         }
                     }
+                    
+                    Divider()
+                    
+                    // Option to switch to local inference
+                    Button(action: {
+                        withAnimation {
+                            useLocalInference = true
+                            
+                            // Show model selector
+                            showMLXModelsSheet = true
+                        }
+                    }) {
+                        Label("Switch to Local Inference", systemImage: "cpu")
+                    }
                 } label: {
                     HStack(alignment: .center) {
                         if let selectedModel = selectedModel, selectedModel.modelProvider == .ollama {
@@ -205,6 +241,7 @@ struct ModelSelectorView: View {
 #if os(macOS) || os(visionOS)
                                 Text(selectedModel.name)
                                     .font(.body)
+                                    .foregroundColor(Color(.label))
 #elseif os(iOS)
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack {
@@ -221,17 +258,31 @@ struct ModelSelectorView: View {
                             }
                         } else {
                             Text("Select Model")
+                                .foregroundColor(Color(.label))
                         }
                         
-                        Image(systemName: "chevron.down")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 10)
-                            .foregroundColor(Color(.label))
-                            .showIf(showChevron)
+                        if showChevron {
+                            Image(systemName: "chevron.down")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 10)
+                                .foregroundColor(Color(.label))
+                        }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
                 }
             }
         }
     }
+}
+
+#Preview {
+    ModelSelectorView(
+        modelsList: LanguageModelSD.sample,
+        selectedModel: LanguageModelSD.sample[0],
+        onSelectModel: {_ in}
+    )
 }

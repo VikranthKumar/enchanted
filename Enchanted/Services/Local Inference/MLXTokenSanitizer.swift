@@ -1,9 +1,16 @@
+//
+//  MLXTokenSanitizer.swift
+//  Enchanted
+//
+//  Created by Vikranth Kumar on 4/5/25.
+//
+
 import Foundation
 
-/// A class to process and filter tokens from local inference models
-class TokenSanitizer {
+/// A utility class to process and filter tokens from MLX models
+public class MLXTokenSanitizer {
     /// List of special tokens that should be filtered out
-    static let specialTokensToFilter = [
+    public static let specialTokensToFilter = [
         // Basic markers
         "<s>", "</s>", "<pad>", "<eos>", "<bos>",
         
@@ -19,12 +26,15 @@ class TokenSanitizer {
         // Mistral family
         "<s>", "</s>", "<unk>",
         
-        // Phi-specific malformed tokens seen in output
+        // BERT family
+        "[CLS]", "[SEP]", "[UNK]", "[PAD]", "[MASK]",
+        
+        // Other problematic tokens
         "<|useruser|>", "<|assassistant|>"
     ]
     
     /// Regular expression patterns for additional token types to match
-    static let tokenPatterns = [
+    public static let tokenPatterns = [
         // Match Phi model's placeholder tokens like <|nnoun1|>, <|datedate1|>, etc.
         "<\\|n[a-z]+\\d+\\|>",
         
@@ -32,10 +42,10 @@ class TokenSanitizer {
         "<\\|[a-z]+[a-z0-9]*\\|>"
     ]
     
-    /// Sanitizes raw tokens from llama.cpp before processing
+    /// Sanitizes raw tokens from MLX before processing
     /// - Parameter token: The raw token string
     /// - Returns: A cleaned token string ready for use
-    static func sanitize(token: String) -> String {
+    public static func sanitize(token: String) -> String {
         var sanitizedToken = token
         
         // 1. Filter out exact special tokens
@@ -78,7 +88,7 @@ class TokenSanitizer {
     }
     
     /// Check if a token contains any of our filtered patterns
-    static func containsFilteredToken(_ text: String) -> Bool {
+    public static func containsFilteredToken(_ text: String) -> Bool {
         // Check exact matches
         for token in specialTokensToFilter {
             if text.contains(token) {
@@ -95,6 +105,44 @@ class TokenSanitizer {
         }
         
         return false
+    }
+    
+    /// Clean up a full text response
+    public static func cleanResponse(_ text: String) -> String {
+        var cleaned = text
+        
+        // Remove any special tokens
+        for token in specialTokensToFilter {
+            cleaned = cleaned.replacingOccurrences(of: token, with: "")
+        }
+        
+        // Apply regex cleaning
+        for pattern in tokenPatterns {
+            cleaned = cleaned.replacingOccurrences(
+                of: pattern,
+                with: "",
+                options: .regularExpression
+            )
+        }
+        
+        // Remove any leftover XML-like tags
+        cleaned = cleaned.replacingOccurrences(
+            of: "<[^>]+>",
+            with: "",
+            options: .regularExpression
+        )
+        
+        // Collapse multiple newlines
+        cleaned = cleaned.replacingOccurrences(
+            of: "\n{3,}",
+            with: "\n\n",
+            options: .regularExpression
+        )
+        
+        // Trim whitespace
+        cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return cleaned
     }
 }
 
